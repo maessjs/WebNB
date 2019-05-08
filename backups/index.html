@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Form Action</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+          crossorigin="anonymous">
+
+    <script src="https://unpkg.com/react@16.4.2/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@16.4.2/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+
+    <link type="text/css" rel="stylesheet" href="stylesheets/style.css">
+
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+            integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+            crossorigin="anonymous"></script>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        window.onload = function () {
+            setTimeout(() => {
+                console.log("document loaded");
+                document.getElementById("demo").innerHTML = "CP3404 Assignment - Programming Product";
+
+                var vartoadd = (("<%= tablet%>").replace(/&lt;/g, "<")).replace(/&gt;/g, ">");
+
+                console.log(
+                    (vartoadd
+                        .replace(/&#34;/g, "\""))
+                );
+
+                var jsonData = JSON.parse(vartoadd.replace(/&#34;/g, "\""));
+                console.log(jsonData);
+
+                /*
+                var dataToPlot = [
+                    {
+                        x: [],
+                        y: [],
+                        type: 'bar'
+                    }
+                ];
+
+                jsonData.forEach(function (item) {
+                    dataToPlot[0].x.push(item.Name);
+                    dataToPlot[0].y.push(parseInt(item.Age));
+                });
+
+
+                Plotly.newPlot('table-to-show', dataToPlot);
+
+                /*
+                var $data = $("#data"),
+                    html = $.parseHTML(vartoadd),
+                    nodeNames = [];
+                $data.append(html);
+                */
+
+
+                //RENDER A TABLE:
+                // EXTRACT VALUE FOR HTML HEADER.
+                // ('Book ID', 'Book Name', 'Category' and 'Price')
+                var col = [];
+                for (var i = 0; i < jsonData.length; i++) {
+                    for (var key in jsonData[i]) {
+                        if (col.indexOf(key) === -1) {
+                            col.push(key);
+                        }
+                    }
+                }
+
+                // CREATE DYNAMIC TABLE.
+                var table = document.createElement("table");
+
+                // CREATE HTML TABLE HEADER ROW USING THE EXTRACTED HEADERS ABOVE.
+
+                var tr = table.insertRow(-1);                   // TABLE ROW.
+
+                for (var i = 0; i < col.length; i++) {
+                    var th = document.createElement("th");      // TABLE HEADER.
+                    th.innerHTML = col[i];
+                    tr.appendChild(th);
+                }
+
+                // ADD JSON DATA TO THE TABLE AS ROWS:
+                //for (var i = 0; i < jsonData.length; i++) {
+                var tablelength = 10;
+                if (jsonData.length <= tablelength){
+                    tablelength = jsonData.length;
+                };
+                for (var i = 0; i < tablelength; i++) {
+                        tr = table.insertRow(-1);
+                        for (var j = 0; j < col.length; j++) {
+                            var tabCell = tr.insertCell(-1);
+                            tabCell.innerHTML = jsonData[i][col[j]];
+                        }
+                    }
+
+
+                // FINALLY ADD THE NEWLY CREATED TABLE WITH JSON DATA TO A CONTAINER.
+                var divContainer = document.getElementById("sample-table");
+                divContainer.innerHTML = "";
+                divContainer.appendChild(table);
+            }, 700);
+        }
+    </script>
+</head>
+<body>
+
+<div class="container">
+
+    <h1 class="h1" id="demo"></h1>
+
+    <h3 id="username-text"><%= name%></h3>
+
+    <form method="POST" action="/submit-form" enctype="multipart/form-data">
+
+        <input class="btn btn-secondary" type="file" name="upload" multiple>
+
+        <input class="btn btn-primary" type="submit"/>
+    </form>
+
+    <h2>10 sample data rows from uploaded dataset:</h2>
+    <div id="data"></div>
+    <di class="table" id="sample-table"></di>
+    <div id="table-to-show"></div>
+
+    <h1>People: This is using React inside Node JS project</h1>
+    <div id="person1"></div>
+    <div id="person2"></div>
+
+    <script src="jsx/react.jsx" type="text/babel"></script>
+
+</div>
+
+</body>
+</html>
