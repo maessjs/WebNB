@@ -1,3 +1,5 @@
+var tableify = require('tableify');
+
 var discretization = require('../algorithms/discretisation.js');
 var statistics = require('../algorithms/statistics.js');
 var getNumeric = require('../algorithms/get_only_numeric_cols.js');
@@ -18,13 +20,14 @@ var classifiedSet;
 var detailedAccuracy;
 var csvContentJson;
 var csvBody;
+var testSet;
 var csvBodyNumericNormalised;
 var csvBodyNumeric;
 const jsdom = require("jsdom");
 const {JSDOM} = jsdom;
 
 var isNumericInside;
-
+let laplace = true;
 var correctOrNot;
 
 const bodyParser = require('body-parser');
@@ -32,27 +35,27 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 //HOME PAGE:
 router.get('/', function (req, res, next) {
-
-    const directory = 'uploads';
-
-    fs.readdir(directory, (err, files) => {
-        if (err) throw err;
-        for (const file of files) {
-            fs.unlink(path.join(directory, file), err => {
-                if (err) throw err;
-            });
-        }
-    });
     res.render('index.html', {uploadedMessage: 'Waiting for upload', tableOriginal: "CP3403", tableToShow: "CP3403"});
 });
 
+router.get('/api/reset', function (req, res, next) {
+    deleteUploaded();
+});
 
 //WHEN USER CLICKS ON DOWNLOAD SAMPLE DATASET:
-router.get('/download', function (req, res, next) {
+router.get('/api/download', function (req, res, next) {
     var file = './downloads/very_small_sample.csv';
     res.download(file); // Set disposition and send it.
 });
 
+//API FOR GETTING THE STRUCTURE OF THE TRAINING DATASET:
+router.get('/submit-form-usertestset', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    // Accept one parameter from frontend named filename
+    const filename = req.query.filename;
+    //original one = csvBody;
+    var clas
+});
 
 //API FOR FETCHING ORIGINAL UPLOADED DATA:
 router.get('/fetch-data', function (req, res, next) {
@@ -71,6 +74,13 @@ router.get('/fetch-data-numeric', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     const filename = req.query.filename;
     res.end(JSON.stringify(csvBodyNumeric));
+});
+
+//API FOR FETCHING NON NUMERIC DATA:
+router.get('/fetch-data-non-numeric', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    const filename = req.query.filename;
+    res.end(JSON.stringify(getNumeric.getNonNumericAttributes(csvBody)));
 });
 
 
@@ -107,9 +117,22 @@ router.get('/fetch-evidence-statistics-original', function (req, res, next) {
 router.get('/fetch-evidence-statistics-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     const filename = req.query.filename;
-    res.end(JSON.stringify(gatherDataForEvidence( getLikelihood_entire(csvBody, true))));
+    res.end(JSON.stringify(gatherDataForEvidence(getLikelihood_entire(csvBody, true))));
 });
 
+//GET DATA FOR CHART:
+router.get('/fetch-evidence-for-chart', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    const filename = req.query.filename;
+
+    var nummericData = getNumeric.getNumericAttributes(csvBody);
+    var nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
+
+    var toFetch = {};
+    toFetch = Object.assign({}, getGeneralCount(nummericData), getGeneralCount(nonNummericData));
+
+    res.end(JSON.stringify(toFetch));
+});
 
 //WHEN USER UPLOADS A CSV FILE
 router.post('/submit-form', (req, res) => {
@@ -117,6 +140,14 @@ router.post('/submit-form', (req, res) => {
     var form = new formidable.IncomingForm();
     var classifiedSet;
     var detailedAccuracy;
+
+    var csvIsEmpty;
+    if (csvBody == null) {
+        csvIsEmpty = 'Before this, the CSV Body is empty';
+    } else {
+        csvIsEmpty = 'Before this, the CSV Body is NOT empty';
+    }
+
     form.encoding = "utf-8";
 
     form.parse(req);
@@ -135,31 +166,56 @@ router.post('/submit-form', (req, res) => {
                 .then((jsonObj) => {
 
                     //THIS IS THE MAIN AND RAW CSV CONTENT THAT NEED TO BE PROCESSED:
-                    csvBody = JSON.parse(JSON.stringify(jsonObj));
+                    if (csvIsEmpty === 'Before this, the CSV Body is NOT empty') {
+                        testSet = JSON.parse(JSON.stringify(jsonObj));
+                    } else {
+                        csvBody = JSON.parse(JSON.stringify(jsonObj));
+                        testSet = JSON.parse(JSON.stringify(jsonObj));
+                    }
 
                     //get only numeric cols: --> this will return a JSON:
                     csvBodyNumeric = getNumeric.getNumericAttributes(csvBody);
                     csvBodyNumericNormalised = getNumeric.getNumericAttributesNormalised(csvBody);
 
                     //Discretization:
-                    isNumericInside = discretization.isThereNumericInside(csvBody);
+                    /*isNumericInside = discretization.isThereNumericInside(csvBody);
                     if (isNumericInside === true) {
                         csvBody = discretization.discretise(3, csvBody);
-                    }
+                    }*/
 
                     //CALC THE LIKELIHOOD ENTIRE:
-                    classifiedSet = getLikelihood_entire(csvBody, true);
+                    //The following will return as the structure of testSet:
+                    classifiedSet = getLikelihood_entire(csvBody, testSet, laplace);
 
-                    detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
-                    correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
+                    console.log("Main process: " + JSON.stringify(classifiedSet));
+
+                    detailedAccuracy = statistics.getDetailedAccuracyByClass(testSet, classifiedSet);
+                    correctOrNot = statistics.calcCorectandIncorrectInstances(testSet, classifiedSet);
 
                     //CALC EACH ATTRIBUTE:
-                    csvContentJson = gatherDataForEvidence(csvBody);
+                    csvContentJson = gatherDataForEvidence(csvBody, false);
+
+                    //Using TableIfy:
+                    var html = tableify(csvContentJson);
 
                     res.status(201).send();
+
+                    /* res.render('contingencytable.html', {
+                        csvBodyNumeric: JSON.stringify(csvBodyNumericNormalised),
+                        uploadedMessage: csvIsEmpty,
+                        tableOriginal: tableify(testSet),
+                        tableClassified: tableify(classifiedSet),
+                        tableToShow: html,
+                        classifiedTableToShow: tableify(gatherDataForEvidence(classifiedSet, false)),
+                        detailed_accuracy: tableify(detailedAccuracy),
+                        correctness: tableify(correctOrNot)
+                    }, (err, html) => {
+                        res.status(200).send(html);
+                    }); */
+                    
                 })
                 .then(() => {
-                     console.log("Rendered OK");
+                        console.log("Rendered OK");
                     }
                 );
         }, 50);
@@ -168,10 +224,73 @@ router.post('/submit-form', (req, res) => {
 
 module.exports = {router: router, csvBody: "OK"};
 
+//------------------------------------------------------------------------------------------------
+
+//Function to reset/delete the dataset:
+const deleteUploaded = function () {
+    const directory = 'uploads';
+    fs.readdir(directory, (err, files) => {
+        if (err) throw err;
+        for (const file of files) {
+            fs.unlink(path.join(directory, file), err => {
+                if (err) throw err;
+            });
+        }
+    });
+    csvBody = null;
+};
+
 
 //------------------------------------------------------------------------------------------------
 
 //The grande collection of naive bayes functions:
+
+const getGeneralCount =  function (data) {
+
+    var evidenceList = {};
+
+    var Data = JSON.parse(JSON.stringify(data));
+    var keysOfData = Object.keys(Data[0]);
+
+    var evidenceAttributeList = {};
+    var anEvidenceAttribute = "";
+    var value;
+    var classifierOutcomeList;
+    var classCol = "";
+
+    var labels = [];
+    var values =[];
+
+    classCol = exportClass(Data);
+    classifierOutcomeList = exportClassifierOutcomeList(Data);
+    classifierOutcomeList = [...new Set(classifierOutcomeList)];
+
+    console.log("classifierOutcomeList: " + classifierOutcomeList);
+
+    keysOfData.forEach((aKey) => {
+        evidenceAttributeList = {};
+        Data.forEach((element) => {
+            anEvidenceAttribute = (element[aKey]);
+            evidenceAttributeList[anEvidenceAttribute] = "";
+
+            value = 0;
+            classifierOutcomeList.forEach((aClass) => {
+                value += (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, false));
+            });
+
+            evidenceAttributeList[anEvidenceAttribute] = value;
+        });
+        //evidenceList[aKey] = evidenceAttributeList;
+        labels = Object.keys(evidenceAttributeList);
+        values = Object.values(evidenceAttributeList);
+        evidenceAttributeList = {};
+        evidenceAttributeList['labels'] = labels;
+        evidenceAttributeList['values'] = values;
+        evidenceList[aKey] = evidenceAttributeList;
+    });
+
+    return evidenceList;
+};
 
 var exportClass = function (Data) {
     var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
@@ -188,7 +307,9 @@ var exportClassifierOutcomeList = function (Data) {
     return classifierOutcomeList;
 };
 
-var gatherDataForEvidence = function (Data) {
+var gatherDataForEvidence = function (data, laplace) {
+    var Data = JSON.parse(JSON.stringify(data));
+    console.log(" gatherDataForEvidence: data inputed: " + JSON.stringify(Data));
     var evidenceList = {};
     var keysOfData = Object.keys(Data[0]);
     var evidenceAttributeList = {};
@@ -199,10 +320,11 @@ var gatherDataForEvidence = function (Data) {
     var classifierOutcomeList;
     var classCol = "";
 
-    var laplace = false;
-
     classCol = exportClass(Data);
     classifierOutcomeList = exportClassifierOutcomeList(Data);
+    classifierOutcomeList = [...new Set(classifierOutcomeList)];
+
+    console.log("classifierOutcomeList: " + classifierOutcomeList);
 
     keysOfData.forEach((aKey) => {
         evidenceAttributeList = {};
@@ -221,7 +343,7 @@ var gatherDataForEvidence = function (Data) {
         });
         evidenceList[aKey] = evidenceAttributeList;
     });
-    console.log(evidenceList);
+    //console.log(evidenceList);
     return evidenceList;
 };
 
@@ -233,7 +355,7 @@ var InstanceofFrequency = function (Data, Evidence, EvidenceAttribute, Class, Cl
         }
     });
     //Applying La Place:
-    if (laplace == true) {
+    if (laplace === true) {
         count++;
     }
     return count;
@@ -261,7 +383,7 @@ var ProbalityDenominator = function (Data, Evidence, Class, ClassifierOutcome, l
     return count;
 };
 
-var list_to_test_wo_class = {
+var EvidenceAttributeList = {
     job: 'unemployed',
     marital: 'married',
     education: 'primary',
@@ -274,6 +396,35 @@ var list_to_test_wo_class = {
     y: 'no'
 };
 
+var getMean = function (Data, Attribute_Need_To_findMean) {
+    var data = JSON.parse(JSON.stringify(Data));
+    var sumAll = 0;
+    var n = 0;
+    data.forEach((aDict) => {
+        sumAll += parseFloat(aDict[Attribute_Need_To_findMean]);
+        n++;
+    });
+    //console.log(sumAll + "/" + n + " = " + (sumAll / n));
+    return (sumAll / n);
+};
+
+var getStdDeviation = function (Data, Attribute_Need_To_findStdDev) {
+    var numeratorOfStdDev = 0;
+    var mean = getMean(Data, Attribute_Need_To_findStdDev);
+    var x;
+    var data = JSON.parse(JSON.stringify(Data));
+    var n = 0;
+
+    data.forEach((aDict) => {
+        x = aDict[Attribute_Need_To_findStdDev];
+        numeratorOfStdDev += Math.abs(Math.pow((x - mean), 2));
+        n++;
+    });
+    //console.log("getStdDeviation = " + numeratorOfStdDev / (data.length -1));
+    return (numeratorOfStdDev / (n - 1));
+
+};
+
 //THE LAPLACE will applied in this function:
 var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeList, laplace) {
     var countClass = 0;
@@ -283,29 +434,62 @@ var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeL
     var total_finalLikelihood = 1;
     var numerator = 0;
     var probalityDenominator = 0;
+    var x;
+    var stdDev;
+    var mean;
+    var attribute;
 
     Data.forEach(function (element) {
-        if (element[Class] == ClassifierOutcome) {
+        if (element[Class] === ClassifierOutcome) {
             countClass++;
         }
     });
+
+    countClass = countClass/(Data.length);
+    console.log("Count class = " + countClass);
 
     var evidenceKeys = Object.keys(EvidenceAttributeList);
 
     for (var i = 0; i < evidenceKeys.length - 1; i++) {
 
         attribute = evidenceKeys[i];
-
         evidenceAttribute_value = EvidenceAttributeList[attribute];
 
-        numerator = InstanceofFrequency(Data, attribute, evidenceAttribute_value, Class, ClassifierOutcome, laplace);
-        probalityDenominator = ProbalityDenominator(Data, attribute, Class, ClassifierOutcome, laplace);
+        if (isNaN(parseInt(evidenceAttribute_value)) === false &&
+            (typeof parseInt(evidenceAttribute_value) == "number")
+        ) {
+            mean = getMean(Data, attribute);
+            stdDev = getStdDeviation(Data, attribute);
+            x = evidenceAttribute_value;
 
-        finalLikelihood = numerator / probalityDenominator;
+            //console.log("\nThe attribute is: " + attribute + " with Mean = " + mean + " and StdDev = " + stdDev
+            //    + " with x = " + x);
+
+            if (stdDev <= 0) {
+                //console.log("std dev is " + stdDev + " <= 0");
+            }
+
+            finalLikelihood = (1 / (stdDev * Math.sqrt(2 * Math.PI)) * Math.exp(-Math.abs(Math.pow((x - mean),2)) / (2 * Math.pow(stdDev, 2))));
+            //console.log("finalLikelihood is OK: " + finalLikelihood + "\n");
+
+            if (isNaN(finalLikelihood) ||finalLikelihood ===0 ){
+                console.log("NOT good: The attribute is: " + attribute + ", final likelihood is " + finalLikelihood);
+            }
+        } else {
+            //console.log("NOT OK: (typeof parseInt(" + evidenceAttribute_value +") == \"number\")");
+            numerator = InstanceofFrequency(Data, attribute, evidenceAttribute_value, Class, ClassifierOutcome, laplace);
+            probalityDenominator = ProbalityDenominator(Data, attribute, Class, ClassifierOutcome, laplace);
+            finalLikelihood = numerator / probalityDenominator;
+            //console.log("finalLikelihood is NOT OK: " + finalLikelihood + "\n");
+        }
+
         total_finalLikelihood *= finalLikelihood;
+        console.log("total_finalLikelihood IS IN LOOP = "+ total_finalLikelihood);
     }
 
+    console.log("total_finalLikelihood BEFORE COUNT CLASS = "+ total_finalLikelihood);
     total_finalLikelihood *= countClass;
+    console.log("total_finalLikelihood = "+ total_finalLikelihood);
     return total_finalLikelihood;
 };
 
@@ -323,8 +507,13 @@ var calculateNormalisedProbability = function (LikelihoodTrue, LikelihoodFalse, 
 //------------------------------------------------------------------------------------------------
 
 //Using the training data set to test:
-var getLikelihood_entire = function (Data, laplace) {
-    var toReturn = JSON.parse(JSON.stringify(Data));
+var getLikelihood_entire = function (Data, TestSet, laplace) {
+    var originData = JSON.parse(JSON.stringify(Data));
+    console.log("getLikelihood_entire: original: " + JSON.stringify(originData));
+
+    var toReturn = JSON.parse(JSON.stringify(TestSet));
+    console.log("getLikelihood_entire: toReturn: " + JSON.stringify(toReturn));
+
     var attributeList = Object.keys(toReturn[1]);
     var classAttr = attributeList[attributeList.length - 1];
     var classList = [];
@@ -334,7 +523,6 @@ var getLikelihood_entire = function (Data, laplace) {
     classList = [...new Set(classList)];
 
     var results = [];
-    var result_each = {};
     var sum_likelihood = 0;
     var theHighestProbability = 0;
     var theHighestProbability_class = ''; //the class (yes or no) in order to assign to the class.
@@ -343,6 +531,7 @@ var getLikelihood_entire = function (Data, laplace) {
     var n = 0;
     var j = 0;
     toReturn.forEach((dict) => {
+        console.log("Considering: " + JSON.stringify(dict));
         results = [];
         sum_likelihood = 0;
 
@@ -350,10 +539,8 @@ var getLikelihood_entire = function (Data, laplace) {
         classList.forEach((aClass) => {
             results.push({
                 'class_name': aClass,
-                'likelihood': getLikelihood(toReturn, classAttr, aClass, dict, laplace),
-
-                //TODO: change the number 14 below:
-                'normalised_probability': (getLikelihood(toReturn, classAttr, aClass, dict, laplace) / 14)
+                'likelihood': getLikelihood(originData, classAttr, aClass, dict, laplace),
+                'normalised_probability': 0
             });
         });
 
@@ -361,24 +548,36 @@ var getLikelihood_entire = function (Data, laplace) {
             sum_likelihood += eachResult.likelihood;
         });
 
+        //If sum = 0:
+        /*
+        if (sum_likelihood === 0){
+            sum_likelihood =1;
+        }
+        */
+
         //Get normalised probability:
         j = 0;
         results.forEach((result) => {
-
             results[j].normalised_probability = (result.likelihood / sum_likelihood);
+            console.log('normalised_probability for ' + JSON.stringify(result.class_name) +' = ' + result.likelihood + '/' + sum_likelihood);
             j = j + 1;
 
         });
-
+        console.log("===> Results in getLikelihood_entire:" + JSON.stringify(results));
         //Get the highest probability:
-        theHighestProbability = 0;
+        theHighestProbability = results[0].normalised_probability;
+        theHighestProbability_class = results[0].class_name;
+        console.log("theHighestProbability TEMP: " + theHighestProbability + " which is " + results[0].class_name);
+
         results.forEach((each) => {
             if (each.normalised_probability > theHighestProbability) {
                 theHighestProbability = each.normalised_probability;
                 theHighestProbability_class = each.class_name;
+                console.log("final theHighestProbability_class: " + theHighestProbability_class);
             }
         });
 
+        console.log("\n");
         toReturn[n][classAttr] = theHighestProbability_class;
         n++;
     });
