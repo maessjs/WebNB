@@ -46,11 +46,11 @@ export default {
   },
   data () {
     return {
-      url1: 'http://localhost:3000/api/test?mode=ts',
+      url1: 'http://localhost:3000/api/test-cv?1',
       kValue: 5,
-      url2: 'http://localhost:3000/api/test?mode=cv&k=',
+      url2: 'http://localhost:3000/api/test-cv?k=',
       selectedFile: null,
-      url3: 'http://localhost:3000/api/test?mode=up',
+      url3: 'http://localhost:3000/api/test-up',
       reqURL: ' ',
       resJSON: ' '
     }
@@ -85,7 +85,7 @@ export default {
       const fd = new FormData()
       fd.append('upload', this.selectedFile, this.selectedFile.name)
 
-      axios.post('http://localhost:3000/api/test?mode=up', fd)
+      axios.post(url3, fd)
         .then(res => { 
           if (res.status === 201) {
             this.resJSON = JSON.stringify(res.data, null, 2)
