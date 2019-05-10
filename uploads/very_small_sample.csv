@@ -1,0 +1,15 @@
+job,marital,education,default,housing,loan,contact,month,poutcome,y
+unemployed,married,primary,no,no,no,cellular,oct,unknown,no
+services,married,secondary,no,yes,yes,cellular,may,failure,no
+management,single,tertiary,no,yes,no,cellular,apr,failure,no
+management,married,tertiary,no,yes,yes,unknown,jun,unknown,no
+blue-collar,married,secondary,no,yes,no,unknown,may,unknown,no
+management,single,tertiary,no,no,no,cellular,feb,failure,yes
+self-employed,married,tertiary,no,yes,no,cellular,may,other,yes
+technician,married,secondary,no,yes,no,cellular,may,unknown,no
+entrepreneur,married,tertiary,no,yes,no,unknown,may,unknown,no
+services,married,primary,no,yes,yes,cellular,apr,failure,no
+services,married,secondary,no,yes,no,unknown,may,unknown,no
+admin.,married,secondary,no,yes,no,cellular,apr,unknown,no
+technician,married,tertiary,no,no,no,cellular,aug,unknown,no
+student,single,secondary,no,no,no,cellular,apr,unknown,yes

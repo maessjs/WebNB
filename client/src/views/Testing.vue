@@ -46,7 +46,7 @@ export default {
   },
   data () {
     return {
-      url1: 'http://localhost:3000/api/test-cv?1',
+      url1: 'http://localhost:3000/api/test-cv?k=1',
       kValue: 5,
       url2: 'http://localhost:3000/api/test-cv?k=',
       selectedFile: null,
