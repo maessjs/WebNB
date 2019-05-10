@@ -30,6 +30,7 @@ let laplace = true;
 var correctOrNot;
 
 var k = 1;
+var confusionMatrix;
 
 //HOME PAGE:
 router.get('/', function (req, res, next) {
@@ -44,15 +45,6 @@ router.get('/api/reset', function (req, res, next) {
 router.get('/api/download', function (req, res, next) {
     var file = './downloads/very_small_sample.csv';
     res.download(file); // Set disposition and send it.
-});
-
-//API FOR GETTING THE STRUCTURE OF THE TRAINING DATASET:
-router.get('/submit-form-usertestset', function (req, res, next) {
-    res.setHeader('Content-Type', 'application/json');
-    // Accept one parameter from frontend named filename
-    const filename = req.query.filename;
-    //original one = csvBody;
-    var clas
 });
 
 //API FOR FETCHING ORIGINAL UPLOADED DATA:
@@ -74,11 +66,11 @@ router.get('/fetch-data-numeric', function (req, res, next) {
     res.end(JSON.stringify(csvBodyNumeric));
 });
 
-//API FOR FETCHING NON NUMERIC DATA:
-router.get('/fetch-data-non-numeric', function (req, res, next) {
+//API FOR FETCHING CORRECTNESS TABLE:
+router.get('/fetch-correctness', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     const filename = req.query.filename;
-    res.end(JSON.stringify(getNumeric.getNonNumericAttributes(csvBody)));
+    res.end(JSON.stringify(correctOrNot));
 });
 
 
@@ -93,7 +85,14 @@ router.get('/fetch-data-numeric-normalised', function (req, res, next) {
 router.get('/fetch-data-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     const filename = req.query.filename;
-    res.end(JSON.stringify(classify(csvBody, true)));
+    res.end(JSON.stringify(classifiedSet));
+});
+
+//API FOR FETCHING ONLY NUMERIC DATA:
+router.get('/fetch-data-classified', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    const filename = req.query.filename;
+    res.end(JSON.stringify(classifiedSet));
 });
 
 
@@ -115,7 +114,7 @@ router.get('/fetch-evidence-statistics-original', function (req, res, next) {
 router.get('/fetch-evidence-statistics-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     const filename = req.query.filename;
-    res.end(JSON.stringify(gatherDataForEvidence(classify(csvBody, true))));
+    res.end(JSON.stringify(gatherDataForEvidence(classifiedSet)));
 });
 
 //GET DATA FOR CHART:
@@ -132,12 +131,111 @@ router.get('/fetch-evidence-for-chart', function (req, res, next) {
     res.end(JSON.stringify(toFetch));
 });
 
+//GET THE CONFUSION MATRIX:
+router.get('/api/fetch-confusion-matrix', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    const filename = req.query.filename;
+    res.end(JSON.stringify(confusionMatrix));
+});
+
+//RETURN THE CLASSIFIED SET WITH K-FOLD VALIDATION
+router.post('/api/test-cv', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+
+    const k = req.query.k;
+
+    //DOING THE K-FOLD-VALIDATION HERE:
+    console.log("Doing k-fold with k = " + k);
+    var amountOfInstances_eachTestSet = Math.floor(csvBody.length / k);
+    var instance_cursor = 0;
+
+    classifiedSet = [];
+
+    confusionMatrix = {
+        //the outer KEY is actual classes, the inner key is classified classes:
+        'yes': {
+            'yes': 0,
+            'no': 0
+        },
+        'no': {
+            'yes': 0,
+            'no': 0
+        }
+    };
+    let tempTestSet;
+    let tempTestSetClassified;
+    while (instance_cursor < csvBody.length) {
+        tempTestSet = csvBody.slice(instance_cursor, instance_cursor + amountOfInstances_eachTestSet);
+        if (tempTestSet !== []) {
+            tempTestSetClassified = classify(csvBody, tempTestSet, laplace);
+            updateConfusionMatrix(tempTestSet, tempTestSetClassified, exportClass(csvBody), confusionMatrix);
+        }
+        classifiedSet = classifiedSet.concat(tempTestSetClassified);
+        instance_cursor += amountOfInstances_eachTestSet;
+    }
+
+    detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
+    correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
+
+    let toReturn; //<-- Getting 15 rows to return to the front-end:
+    toReturn = classifiedSet.slice(0, 15);
+
+    res.end(JSON.stringify(toReturn));
+});
+
+//RETURN THE CLASSIFIED SET WITH UPLOADED TEST SET:
+router.post('/api/test-up', function (req, res, next) {
+    console.log("/api/test-up is working.");
+    res.setHeader('Content-Type', 'application/json');
+    let file = req.files['test-data'];
+    console.log('fileName = ' + file);
+
+    let form = new formidable.IncomingForm();
+
+    form.on('fileBegin', function (name, file) {
+
+        let str = __dirname;
+        let dir_name = str.substring(0, str.length - 7);
+
+        file.path = dir_name + "/uploads/" + file.name;
+        console.log('/api/test-up = ' + file.path);
+
+        setTimeout(() => {
+            csv()
+                .fromFile(file.path)
+                .then((jsonObj) => {
+                    classifiedSet = [];
+                    confusionMatrix = {
+                        //the outer KEY is actual classes, the inner key is classified classes:
+                        'yes': {
+                            'yes': 0,
+                            'no': 0
+                        },
+                        'no': {
+                            'yes': 0,
+                            'no': 0
+                        }
+                    };
+                    testSet = JSON.parse(JSON.stringify(jsonObj));
+                    classifiedSet = classify(csvBody,testSet,laplace);
+                    detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
+                    correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
+                    updateConfusionMatrix(csvBody, classifiedSet, exportClass(csvBody), confusionMatrix);
+                    console.log('classifiedSet.slice(0, 15) = ' + classifiedSet.slice(0, 15));
+                    res.end(JSON.stringify(classifiedSet.slice(0, 15)));
+                })
+                .then(() => {
+                        console.log("api/test-up OK");
+                    }
+                );
+        }, 50);
+    });
+});
+
 //WHEN USER UPLOADS A CSV FILE
 router.post('/submit-form', (req, res, next) => {
 
     var form = new formidable.IncomingForm();
-    var classifiedSet;
-    var detailedAccuracy;
 
     console.log('k = ' + k);
 
@@ -152,14 +250,13 @@ router.post('/submit-form', (req, res, next) => {
     form.parse(req);
 
     try {
-        form.on('field', function(name, value) {
-            if (value === '' || isNaN(value)){
+        form.on('field', function (name, value) {
+            if (value === '' || isNaN(value)) {
             } else {
                 k = value;
             }
         });
-    }
-    catch(err) {
+    } catch (err) {
         k = 1;
     }
 
@@ -177,53 +274,13 @@ router.post('/submit-form', (req, res, next) => {
                 .then((jsonObj) => {
 
                     //THIS IS THE MAIN AND RAW CSV CONTENT THAT NEED TO BE PROCESSED:
-                    if (csvIsEmpty === 'Before this, the CSV Body is NOT empty') {
-                        testSet = [];
-                    } else {
-                        csvBody = JSON.parse(JSON.stringify(jsonObj));
-                        testSet = JSON.parse(JSON.stringify(jsonObj));
-                    }
+                    //console.log(jsonObj);
+                    testSet = JSON.parse(JSON.stringify(jsonObj));
+                    csvBody = JSON.parse(JSON.stringify(jsonObj));
 
                     //get only numeric cols: --> this will return a JSON:
                     csvBodyNumeric = getNumeric.getNumericAttributes(csvBody);
                     csvBodyNumericNormalised = getNumeric.getNumericAttributesNormalised(csvBody);
-
-                    //CALC THE LIKELIHOOD ENTIRE:
-                    classifiedSet = classify(csvBody, testSet, laplace);
-
-                    //DOING THE K-FOLD-VALIDATION HERE:
-                    console.log("Doing k-fold with k = " + k);
-                    var amountOfInstances_eachTestSet = Math.floor(csvBody.length / k);
-                    var instance_cursor = 0;
-
-                    var confusionMatrix = {
-                        //the outer KEY is actual classes, the inner key is classified classes:
-                        'yes':{
-                            'yes':0,
-                            'no':0
-                        },
-                        'no':{
-                            'yes':0,
-                            'no':0
-                        }
-                    };
-
-                    while (instance_cursor<csvBody.length){
-                        console.log('instance_cursor = ' + instance_cursor);
-                        testSet = csvBody.slice(instance_cursor, instance_cursor+amountOfInstances_eachTestSet);
-                        if (testSet !== []){
-                            updateConfusionMatrix(testSet,
-                                classify(csvBody, testSet, laplace),
-                                'y',
-                                confusionMatrix );
-                        }
-                        instance_cursor+=amountOfInstances_eachTestSet;
-                    }
-
-                    console.log("Main process: " + JSON.stringify(classifiedSet));
-
-                    detailedAccuracy = statistics.getDetailedAccuracyByClass(testSet, classifiedSet);
-                    correctOrNot = statistics.calcCorectandIncorrectInstances(testSet, classifiedSet);
 
                     //CALC EACH ATTRIBUTE:
                     csvContentJson = gatherDataForEvidence(csvBody, false);
@@ -252,32 +309,32 @@ const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribu
     //classAttribute will be 'y'
     //This function will use the available labels in ConfusionMatrixTemplate as classifier outcome to calculate:
 
-    let classList =[];
+    let classList = [];
 
     let originalData = JSON.parse(JSON.stringify(OriginalSet));
     let classifiedData = JSON.parse(JSON.stringify(ClassifiedSet));
 
     //ConfusionMatrixTemplate.forEach((each) => {
-        classList = (Object.keys(ConfusionMatrixTemplate));
-   // });
+    classList = (Object.keys(ConfusionMatrixTemplate));
+    // });
 
     //classList = [...new Set(classList)];
-    console.log('classList = ' + classList);
+    //console.log('classList = ' + classList);
 
     let length_to_test = ClassifiedSet.length;
-    console.log('ClassifiedSet.length = ' + ClassifiedSet.length);
+    //console.log('ClassifiedSet.length = ' + ClassifiedSet.length);
 
     //Getting the False ones:
     classList.forEach((actualClass) => {
         classList.forEach((classifiedClass) => {
-            for (let m = 0; m < length_to_test; m++) {
-                if (originalData[m][classAttribute] === actualClass
-                    && classifiedData[m][classAttribute] === classifiedClass) {
-                    ConfusionMatrixTemplate[actualClass][classifiedClass]++;
+                for (let m = 0; m < length_to_test; m++) {
+                    if (originalData[m][classAttribute] === actualClass
+                        && classifiedData[m][classAttribute] === classifiedClass) {
+                        ConfusionMatrixTemplate[actualClass][classifiedClass]++;
+                    }
                 }
             }
-        }
-    )
+        )
     });
 
 };
@@ -548,7 +605,7 @@ var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeL
 
     //console.log("total_finalLikelihood BEFORE COUNT CLASS = " + total_finalLikelihood);
     total_finalLikelihood *= countClass;
-   // console.log("total_finalLikelihood = " + total_finalLikelihood);
+    // console.log("total_finalLikelihood = " + total_finalLikelihood);
     return total_finalLikelihood;
 };
 
