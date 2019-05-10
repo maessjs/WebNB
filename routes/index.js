@@ -150,12 +150,18 @@ router.post('/submit-form', (req, res, next) => {
 
     form.encoding = "utf-8";
     form.parse(req);
-    form.on('field', function(name, value) {
-        if (value === '' || isNaN(value)){
-        } else {
-            k = value;
-        }
-    });
+
+    try {
+        form.on('field', function(name, value) {
+            if (value === '' || isNaN(value)){
+            } else {
+                k = value;
+            }
+        });
+    }
+    catch(err) {
+        k = 1;
+    }
 
     form.on('fileBegin', function (name, file) {
 
@@ -186,7 +192,7 @@ router.post('/submit-form', (req, res, next) => {
                     classifiedSet = classify(csvBody, testSet, laplace);
 
                     //DOING THE K-FOLD-VALIDATION HERE:
-                    console.log("k = " + k);
+                    console.log("Doing k-fold with k = " + k);
                     var amountOfInstances_eachTestSet = Math.floor(csvBody.length / k);
                     var instance_cursor = 0;
 
@@ -203,7 +209,7 @@ router.post('/submit-form', (req, res, next) => {
                     };
 
                     while (instance_cursor<csvBody.length){
-                        console.log('instance_cursor = ' + instance_cursor)
+                        console.log('instance_cursor = ' + instance_cursor);
                         testSet = csvBody.slice(instance_cursor, instance_cursor+amountOfInstances_eachTestSet);
                         if (testSet !== []){
                             updateConfusionMatrix(testSet,
@@ -226,20 +232,6 @@ router.post('/submit-form', (req, res, next) => {
                     var html = tableify(csvContentJson);
 
                     res.status(201).send();
-
-                    /*res.render('contingencytable.html', {
-                        confusionMatrix:tableify(confusionMatrix),
-                        csvBodyNumeric: JSON.stringify(csvBodyNumericNormalised),
-                        uploadedMessage: csvIsEmpty,
-                        tableOriginal: tableify(testSet),
-                        tableClassified: tableify(classifiedSet),
-                        tableToShow: html,
-                        classifiedTableToShow: tableify(gatherDataForEvidence(classifiedSet, false)),
-                        detailed_accuracy: tableify(detailedAccuracy),
-                        correctness: tableify(correctOrNot)
-                    }, (err, html) => {
-                        res.status(200).send(html);
-                    });*/
 
                 })
                 .then(() => {
@@ -274,20 +266,6 @@ const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribu
 
     let length_to_test = ClassifiedSet.length;
     console.log('ClassifiedSet.length = ' + ClassifiedSet.length);
-
-    //Getting the True Positive and True Negative:
-    /*classList.forEach((aClass) => {
-        for (let m = 0; m < length_to_test; m++) {
-            console.log('\naClass en cours = ' + aClass);
-            console.log('originalData[m][classAttribute] = ' + originalData[m][classAttribute]);
-            console.log('classifiedData[m][classAttribute] = ' + classifiedData[m][classAttribute]);
-            if (originalData[m][classAttribute] == aClass
-                && classifiedData[m][classAttribute] == aClass) {
-                console.log(aClass + ' - '+ aClass);
-                ConfusionMatrixTemplate[aClass][aClass]++;
-            }
-        }
-    });*/
 
     //Getting the False ones:
     classList.forEach((actualClass) => {
