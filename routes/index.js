@@ -225,7 +225,9 @@ router.post('/submit-form', (req, res, next) => {
                     //Using TableIfy:
                     var html = tableify(csvContentJson);
 
-                    res.render('contingencytable.html', {
+                    res.status(201).send();
+
+                    /*res.render('contingencytable.html', {
                         confusionMatrix:tableify(confusionMatrix),
                         csvBodyNumeric: JSON.stringify(csvBodyNumericNormalised),
                         uploadedMessage: csvIsEmpty,
@@ -237,7 +239,8 @@ router.post('/submit-form', (req, res, next) => {
                         correctness: tableify(correctOrNot)
                     }, (err, html) => {
                         res.status(200).send(html);
-                    });
+                    });*/
+
                 })
                 .then(() => {
                         console.log("Rendered OK");
