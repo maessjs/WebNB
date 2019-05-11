@@ -85,10 +85,10 @@ export default {
       const fd = new FormData()
       fd.append('upload', this.selectedFile, this.selectedFile.name)
 
-      axios.post(url3, fd)
+      axios.post(this.reqURL, fd)
         .then(res => { 
           if (res.status === 201) {
-            this.resJSON = JSON.stringify(res.data, null, 2)
+            this.resJSON = JSON.stringify(res.data, null, 2);
           }
         })
         .catch(err => console.log(err))

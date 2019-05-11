@@ -51,14 +51,14 @@ module.exports = {
             'Incorrect': 0
         };
 
-        var originalAttributeList = Object.keys(originalData[1]);
-        var classifiedAttributeList = Object.keys(classifiedData[1]);
-
-        console.log("statistics: originalAttributeList: " + JSON.stringify(originalAttributeList));
-        console.log("statistics: classifiedAttributeList: " + JSON.stringify(classifiedAttributeList));
+        var originalAttributeList = Object.keys(originalData[0]);
+        var classifiedAttributeList = Object.keys(classifiedData[0]);
 
         var originClassAttr = originalAttributeList[originalAttributeList.length - 1]; //y
+        console.log('originClassAttr = ' + originClassAttr);
+
         var classifiedClassAttr = classifiedAttributeList[classifiedAttributeList.length - 1]; //y
+        console.log('classifiedClassAttr = ' + classifiedClassAttr);
 
         var classList = [];
         originalData.forEach((dict) => {
@@ -66,10 +66,6 @@ module.exports = {
         });
         classList = [...new Set(classList)];
         console.log("statistics: classList: " + classList);
-
-        var compar = false;
-        var countOriginal;
-        var countClassified;
 
         var currentDict;
 

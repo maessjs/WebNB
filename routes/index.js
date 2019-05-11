@@ -3,6 +3,8 @@ var discretization = require('../algorithms/discretisation.js');
 var statistics = require('../algorithms/statistics.js');
 var getNumeric = require('../algorithms/get_only_numeric_cols.js');
 
+var multer  = require('multer');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -187,10 +189,14 @@ router.post('/api/test-cv', function (req, res, next) {
 router.post('/api/test-up', function (req, res, next) {
     console.log("/api/test-up is working.");
     res.setHeader('Content-Type', 'application/json');
-    let file = req.files['test-data'];
+
+    let file = req.files;
     console.log('fileName = ' + file);
 
     let form = new formidable.IncomingForm();
+
+    form.encoding = "utf-8";
+    form.parse(req);
 
     form.on('fileBegin', function (name, file) {
 
@@ -217,12 +223,21 @@ router.post('/api/test-up', function (req, res, next) {
                         }
                     };
                     testSet = JSON.parse(JSON.stringify(jsonObj));
+                    console.log('\n\ntestSet = ' + JSON.stringify(testSet));
+                    console.log('\n\ncsvBody = ' + JSON.stringify(csvBody));
+
                     classifiedSet = classify(csvBody,testSet,laplace);
-                    detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
-                    correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
-                    updateConfusionMatrix(csvBody, classifiedSet, exportClass(csvBody), confusionMatrix);
+                    console.log('\n\nclassifiedSet = ' + JSON.stringify(classifiedSet));
+
+                    detailedAccuracy = statistics.getDetailedAccuracyByClass(testSet, classifiedSet);
+                    correctOrNot = statistics.calcCorectandIncorrectInstances(testSet, classifiedSet);
+
+                    updateConfusionMatrix(testSet, classifiedSet, exportClass(csvBody), confusionMatrix);
+
                     console.log('classifiedSet.slice(0, 15) = ' + classifiedSet.slice(0, 15));
-                    res.end(JSON.stringify(classifiedSet.slice(0, 15)));
+
+                    let toReturn = classifiedSet.slice(0, 15);
+                    res.end(JSON.stringify(toReturn));
                 })
                 .then(() => {
                         console.log("api/test-up OK");
