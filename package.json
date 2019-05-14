@@ -27,7 +27,6 @@
     "osm-discretize": "^1.0.0",
     "plotly.js": "^1.47.3",
     "pug": "2.0.0-beta11",
-    "react-plotly.js": "^2.3.0",
     "tableify": "^1.1.0"
   },
   "devDependencies": {}
