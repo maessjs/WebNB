@@ -5,20 +5,15 @@
   <div>
     <div class="box">
       <p>runs POST {{url1}}</p>
-      <form submit.prevent>
-        <input id="kInput" type="text" v-model.number="url1" />
-        <button @click="req1">Run</button>
-      </form>
+      <input id="kInput" type="number" v-model.number="kValue" />
+      <button @click="req1">Run</button>
     </div>
     <div class="box">
       <p>runs POST {{url2}}</p>
       <p>body:</p>
-      <form submit.prevent>
-        <input type="file" name="test-data" @change="onFileSelected">
-        <button @click="req2">Run</button>
-      </form>
+      <input type="file" name="test-data" @change="onFileSelected">
+      <button @click="req2">Run</button>
     </div>
-    <!-- response -->
     <div>
       <h4>Latest request:</h4>
       <p>Latest request (URL):</p>
@@ -42,16 +37,22 @@ export default {
   },
   data () {
     return {
-      url1: 'http://localhost:3000/api/test-cv?k=1',
+      url1part: 'http://localhost:3000/api/test-cv?k=',
+      kValue: 1,
       selectedFile: null,
       url2: 'http://localhost:3000/api/test-up',
-      reqURL: ' ',
-      resJSON: ' '
+      reqURL: '',
+      resJSON: ''
+    }
+  },
+  computed: {
+    url1: function () {
+      return this.url1part + this.kValue
     }
   },
   methods: {
     req1() {
-      console.log('this.kValue:', this.kValue)
+      console.log('this.url1:', this.url1)
       this.reqURL = this.url1
       this.resJSON = ''
 
@@ -75,7 +76,7 @@ export default {
 
       axios.post(this.reqURL, fd)
         .then(res => { 
-          if (res.status === 201) {
+          if (res.status === 202) {
             this.resJSON = JSON.stringify(res.data, null, 2);
           }
         })

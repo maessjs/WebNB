@@ -237,7 +237,8 @@ router.post('/api/test-up', function (req, res, next) {
                     console.log('classifiedSet.slice(0, 15) = ' + classifiedSet.slice(0, 15));
 
                     let toReturn = classifiedSet.slice(0, 15);
-                    res.end(JSON.stringify(toReturn));
+                    
+                    res.status(202).end(JSON.stringify(resObject));
                 })
                 .then(() => {
                         console.log("api/test-up OK");
