@@ -26,8 +26,7 @@
     "multer": "^1.4.1",
     "osm-discretize": "^1.0.0",
     "plotly.js": "^1.47.3",
-    "pug": "2.0.0-beta11",
-    "tableify": "^1.1.0"
+    "pug": "2.0.0-beta11"
   },
   "devDependencies": {}
 }

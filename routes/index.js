@@ -1,4 +1,3 @@
-var tableify = require('tableify');
 var discretization = require('../algorithms/discretisation.js');
 var statistics = require('../algorithms/statistics.js');
 var getNumeric = require('../algorithms/get_only_numeric_cols.js');
@@ -238,7 +237,7 @@ router.post('/api/test-up', function (req, res, next) {
 
                     let toReturn = classifiedSet.slice(0, 15);
                     
-                    res.status(202).end(JSON.stringify(resObject));
+                    res.status(202).end(JSON.stringify(toReturn));
                 })
                 .then(() => {
                         console.log("api/test-up OK");
@@ -300,9 +299,6 @@ router.post('/submit-form', (req, res, next) => {
 
                     //CALC EACH ATTRIBUTE:
                     csvContentJson = gatherDataForEvidence(csvBody, false);
-
-                    //Using TableIfy:
-                    var html = tableify(csvContentJson);
 
                     res.status(201).send();
 
