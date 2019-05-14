@@ -5,21 +5,17 @@
   <div>
     <div class="box">
       <p>runs POST {{url1}}</p>
-      <button @click="req1">Run</button>
-    </div>
-    <div class="box">
-      <p>runs POST {{url2 + kValue}}</p>
       <form submit.prevent>
-        <input id="kInput" type="number" v-model.number="kValue" />
-        <button @click="req2">Run</button>
+        <input id="kInput" type="text" v-model.number="url1" />
+        <button @click="req1">Run</button>
       </form>
     </div>
     <div class="box">
-      <p>runs POST {{url3}}</p>
+      <p>runs POST {{url2}}</p>
       <p>body:</p>
       <form submit.prevent>
         <input type="file" name="test-data" @change="onFileSelected">
-        <button @click="req3">Run</button>
+        <button @click="req2">Run</button>
       </form>
     </div>
     <!-- response -->
@@ -47,26 +43,17 @@ export default {
   data () {
     return {
       url1: 'http://localhost:3000/api/test-cv?k=1',
-      kValue: 5,
-      url2: 'http://localhost:3000/api/test-cv?k=',
       selectedFile: null,
-      url3: 'http://localhost:3000/api/test-up',
+      url2: 'http://localhost:3000/api/test-up',
       reqURL: ' ',
       resJSON: ' '
     }
   },
   methods: {
     req1() {
+      console.log('this.kValue:', this.kValue)
       this.reqURL = this.url1
-
-      axios.post(this.reqURL)
-      .then(res => {
-        this.resJSON = JSON.stringify(res.data, null, 2)
-      })
-      .catch(err => console.log('err:', err))
-    },
-    req2() {
-      this.reqURL = this.url2
+      this.resJSON = ''
 
       axios.post(this.reqURL)
       .then(res => {
@@ -77,10 +64,11 @@ export default {
     onFileSelected(e) {
       this.selectedFile = e.target.files[0]
     },
-    req3() {
+    req2() {
       if (!this.selectedFile) return
 
-      this.reqURL = this.url3
+      this.reqURL = this.url2
+      this.resJSON = ''
 
       const fd = new FormData()
       fd.append('upload', this.selectedFile, this.selectedFile.name)
@@ -105,7 +93,7 @@ export default {
 <style scoped>
 .box {
   display: inline-block;
-  width: 264px;
+  width: 295px;
 }
 
 #kInput {
