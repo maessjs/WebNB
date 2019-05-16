@@ -1,4 +1,5 @@
 var discretization = require('../algorithms/discretisation.js');
+const converter = require('json-2-csv');
 var statistics = require('../algorithms/statistics.js');
 var getNumeric = require('../algorithms/get_only_numeric_cols.js');
 
@@ -288,6 +289,31 @@ router.post('/api/test-up', function (req, res, next) {
                 );
         }, 50);
     });
+});
+
+//DOWNLOAD THE CLASSIFIED SET:
+router.get('/api/download-classified', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+
+    let toWriteToCSV = {"rows": []};
+    let file = './classified_csv/classified.csv';
+    toWriteToCSV.rows = classifiedSet;
+
+    let json2csvCallback = function (err, csv) {
+        if (err) throw err;
+        fs.writeFile(file, csv, 'utf8', function(err) {
+          if (err) {
+            console.log('Some error occured - file either not saved or corrupted file saved.');
+          } else {
+            console.log('It\'s saved!');
+            res.download(file);
+          }
+        });
+    };
+    
+    converter.json2csv(toWriteToCSV.rows, json2csvCallback, {
+        prependHeader: true     
+    });;
 });
 
 //WHEN USER UPLOADS A CSV FILE
