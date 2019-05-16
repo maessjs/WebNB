@@ -35,7 +35,7 @@ var confusionMatrix;
 
 //HOME PAGE:
 router.get('/', function (req, res, next) {
-    res.render('index.html', {uploadedMessage: 'Waiting for upload', tableOriginal: "CP3403", tableToShow: "CP3403"});
+    //res.render('index.html', {uploadedMessage: 'Waiting for upload', tableOriginal: "CP3403", tableToShow: "CP3403"});
 });
 
 router.get('/api/reset', function (req, res, next) {
@@ -44,17 +44,13 @@ router.get('/api/reset', function (req, res, next) {
 
 //WHEN USER CLICKS ON DOWNLOAD SAMPLE DATASET:
 router.get('/api/download', function (req, res, next) {
-    var file = './downloads/very_small_sample.csv';
+    let file = './downloads/very_small_sample.csv';
     res.download(file); // Set disposition and send it.
 });
 
-//API FOR FETCHING ORIGINAL UPLOADED DATA:
+//API FOR FETCHING ENTIRE ORIGINAL UPLOADED DATA:
 router.get('/fetch-data', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-
-    // Accept one parameter from frontend named filename
-    const filename = req.query.filename;
-
     res.end(JSON.stringify(csvBody));
     console.log(csvBody);
 });
@@ -63,14 +59,12 @@ router.get('/fetch-data', function (req, res, next) {
 //API FOR FETCHING ONLY NUMERIC DATA:
 router.get('/fetch-data-numeric', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(csvBodyNumeric));
 });
 
 //API FOR FETCHING CORRECTNESS TABLE:
 router.get('/fetch-correctness', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(correctOrNot));
 });
 
@@ -78,21 +72,12 @@ router.get('/fetch-correctness', function (req, res, next) {
 //API FOR FETCHING ONLY NUMERIC DATA:
 router.get('/fetch-data-numeric-normalised', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(csvBodyNumericNormalised));
 });
 
-//API FOR FETCHING ONLY NUMERIC DATA:
+//API FOR FETCHING CLASSIFIED DATA
 router.get('/fetch-data-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
-    res.end(JSON.stringify(classifiedSet));
-});
-
-//API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/fetch-data-classified', function (req, res, next) {
-    res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(classifiedSet));
 });
 
@@ -100,28 +85,24 @@ router.get('/fetch-data-classified', function (req, res, next) {
 //API FOR FETCHING ONLY NUMERIC DATA:
 router.get('/fetch-accuracy', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(detailedAccuracy));
 });
 
 //API FOR FETCHING ONLY NUMERIC DATA:
 router.get('/fetch-evidence-statistics-original', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(gatherDataForEvidence(csvBody)));
 });
 
 //API FOR FETCHING ONLY NUMERIC DATA:
 router.get('/fetch-evidence-statistics-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(gatherDataForEvidence(classifiedSet)));
 });
 
 //GET DATA FOR CHART:
 router.get('/fetch-evidence-for-chart', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
 
     var nummericData = getNumeric.getNumericAttributes(csvBody);
     var nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
@@ -135,7 +116,6 @@ router.get('/fetch-evidence-for-chart', function (req, res, next) {
 //GET THE CONFUSION MATRIX:
 router.get('/api/fetch-confusion-matrix', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    const filename = req.query.filename;
     res.end(JSON.stringify(confusionMatrix));
 });
 
@@ -143,7 +123,23 @@ router.get('/api/fetch-confusion-matrix', function (req, res, next) {
 router.post('/api/test-cv', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
 
-    const k = req.query.k;
+    let k = req.query.k;
+
+    /*VALIDTION OF K:
+    - k must be >= 1
+    - k can be only integer
+    - k cannot be greaer than the length of uploade test set
+    */
+    if (isNaN(k)){
+        res.end(JSON.stringify(['Your k is not a valid number, please recheck.']));
+        return;
+    }else{
+        k = Math.floor(k);
+        if (k<1){
+            res.end(JSON.stringify(['Number k must be greater than 1, please recheck.']));
+            return;
+        }
+    }
 
     //DOING THE K-FOLD-VALIDATION HERE:
     console.log("Doing k-fold with k = " + k);
@@ -178,9 +174,17 @@ router.post('/api/test-cv', function (req, res, next) {
     detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
     correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
 
-    let toReturn; //<-- Getting 15 rows to return to the front-end:
-    toReturn = classifiedSet.slice(0, 15);
+    let toReturn = {
+        first_15rows_results: null,
+        correctness: null,
+        detailed_accuracy: null,
+        confusion_matrix: null,
+    };
 
+    toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
+    toReturn.correctness = correctOrNot;
+    toReturn.detailed_accuracy = detailedAccuracy;
+    toReturn.confusion_matrix = confusionMatrix;
     res.end(JSON.stringify(toReturn));
 });
 
@@ -222,21 +226,26 @@ router.post('/api/test-up', function (req, res, next) {
                         }
                     };
                     testSet = JSON.parse(JSON.stringify(jsonObj));
-                    console.log('\n\ntestSet = ' + JSON.stringify(testSet));
-                    console.log('\n\ncsvBody = ' + JSON.stringify(csvBody));
 
                     classifiedSet = classify(csvBody,testSet,laplace);
-                    console.log('\n\nclassifiedSet = ' + JSON.stringify(classifiedSet));
 
                     detailedAccuracy = statistics.getDetailedAccuracyByClass(testSet, classifiedSet);
                     correctOrNot = statistics.calcCorectandIncorrectInstances(testSet, classifiedSet);
 
                     updateConfusionMatrix(testSet, classifiedSet, exportClass(csvBody), confusionMatrix);
 
-                    console.log('classifiedSet.slice(0, 15) = ' + classifiedSet.slice(0, 15));
+                    let toReturn = {
+                        first_15rows_results: null,
+                        correctness: null,
+                        detailed_accuracy: null,
+                        confusion_matrix: null,
+                    };
+                
+                    toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
+                    toReturn.correctness = correctOrNot;
+                    toReturn.detailed_accuracy = detailedAccuracy;
+                    toReturn.confusion_matrix = confusionMatrix;
 
-                    let toReturn = classifiedSet.slice(0, 15);
-                    
                     res.status(202).end(JSON.stringify(toReturn));
                 })
                 .then(() => {
@@ -252,8 +261,6 @@ router.post('/submit-form', (req, res, next) => {
 
     var form = new formidable.IncomingForm();
 
-    console.log('k = ' + k);
-
     var csvIsEmpty;
     if (csvBody == null) {
         csvIsEmpty = 'Before this, the CSV Body is empty';
@@ -263,17 +270,6 @@ router.post('/submit-form', (req, res, next) => {
 
     form.encoding = "utf-8";
     form.parse(req);
-
-    try {
-        form.on('field', function (name, value) {
-            if (value === '' || isNaN(value)) {
-            } else {
-                k = value;
-            }
-        });
-    } catch (err) {
-        k = 1;
-    }
 
     form.on('fileBegin', function (name, file) {
 
@@ -366,6 +362,8 @@ const deleteUploaded = function () {
         }
     });
     csvBody = null;
+    testSet = null;
+    classifiedSet = null;
 };
 
 
@@ -388,6 +386,7 @@ const getGeneralCount = function (data) {
 
     var labels = [];
     var values = [];
+    var count = 0;
 
     classCol = exportClass(Data);
     classifierOutcomeList = exportClassifierOutcomeList(Data);
@@ -408,12 +407,19 @@ const getGeneralCount = function (data) {
 
             evidenceAttributeList[anEvidenceAttribute] = value;
         });
-        //evidenceList[aKey] = evidenceAttributeList;
         labels = Object.keys(evidenceAttributeList);
         values = Object.values(evidenceAttributeList);
+        
         evidenceAttributeList = {};
         evidenceAttributeList['labels'] = labels;
         evidenceAttributeList['values'] = values;
+
+        //Get the total:
+        values.forEach((aValue) => {
+            count ++;
+        });
+        evidenceAttributeList['count'] = count + " instances";
+
         evidenceList[aKey] = evidenceAttributeList;
     });
 
@@ -437,13 +443,13 @@ var exportClassifierOutcomeList = function (Data) {
 
 var gatherDataForEvidence = function (data, laplace) {
     var Data = JSON.parse(JSON.stringify(data));
-    //console.log(" gatherDataForEvidence: data inputed: " + JSON.stringify(Data));
     var evidenceList = {};
     var keysOfData = Object.keys(Data[0]);
     var evidenceAttributeList = {};
     var anEvidenceAttribute = "";
 
     var value;
+    let count = {};
 
     var classifierOutcomeList;
     var classCol = "";
@@ -452,9 +458,8 @@ var gatherDataForEvidence = function (data, laplace) {
     classifierOutcomeList = exportClassifierOutcomeList(Data);
     classifierOutcomeList = [...new Set(classifierOutcomeList)];
 
-    //console.log("classifierOutcomeList: " + classifierOutcomeList);
-
     keysOfData.forEach((aKey) => {
+        //count = {};
         evidenceAttributeList = {};
         Data.forEach((element) => {
             anEvidenceAttribute = (element[aKey]);
@@ -462,16 +467,20 @@ var gatherDataForEvidence = function (data, laplace) {
 
             value = {};
             classifierOutcomeList.forEach((aClass) => {
-                value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace)
+                /* value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace)
                     + "/"
-                    + ProbalityDenominator(Data, aKey, classCol, aClass, laplace));
+                    + ProbalityDenominator(Data, aKey, classCol, aClass, laplace)); */
+                value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace));
+                
             });
             evidenceAttributeList[anEvidenceAttribute] = value;
-
         });
+        classifierOutcomeList.forEach((aClass) => {
+            count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
+        });
+        evidenceAttributeList['count'] = count;
         evidenceList[aKey] = evidenceAttributeList;
     });
-    //console.log(evidenceList);
     return evidenceList;
 };
 
@@ -548,7 +557,6 @@ var getStdDeviation = function (Data, Attribute_Need_To_findStdDev) {
         numeratorOfStdDev += Math.abs(Math.pow((x - mean), 2));
         n++;
     });
-    //console.log("getStdDeviation = " + numeratorOfStdDev / (data.length -1));
     return (numeratorOfStdDev / (n - 1));
 
 };
@@ -556,7 +564,6 @@ var getStdDeviation = function (Data, Attribute_Need_To_findStdDev) {
 //THE LAPLACE will applied in this function:
 var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeList, laplace) {
     var countClass = 0;
-    var singleLikelihood = 0;
     var evidenceAttribute_value;
     var finalLikelihood = 0;
     var total_finalLikelihood = 1;
@@ -574,7 +581,6 @@ var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeL
     });
 
     countClass = countClass / (Data.length);
-    //console.log("Count class = " + countClass);
 
     var evidenceKeys = Object.keys(EvidenceAttributeList);
 
@@ -590,34 +596,17 @@ var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeL
             stdDev = getStdDeviation(Data, attribute);
             x = evidenceAttribute_value;
 
-            //console.log("\nThe attribute is: " + attribute + " with Mean = " + mean + " and StdDev = " + stdDev
-            //    + " with x = " + x);
-
-            if (stdDev <= 0) {
-                //console.log("std dev is " + stdDev + " <= 0");
-            }
-
             finalLikelihood = (1 / (stdDev * Math.sqrt(2 * Math.PI)) * Math.exp(-Math.abs(Math.pow((x - mean), 2)) / (2 * Math.pow(stdDev, 2))));
-            //console.log("finalLikelihood is OK: " + finalLikelihood + "\n");
-
-            if (isNaN(finalLikelihood) || finalLikelihood === 0) {
-                //console.log("NOT good: The attribute is: " + attribute + ", final likelihood is " + finalLikelihood);
-            }
         } else {
-            //console.log("NOT OK: (typeof parseInt(" + evidenceAttribute_value +") == \"number\")");
             numerator = InstanceofFrequency(Data, attribute, evidenceAttribute_value, Class, ClassifierOutcome, laplace);
             probalityDenominator = ProbalityDenominator(Data, attribute, Class, ClassifierOutcome, laplace);
             finalLikelihood = numerator / probalityDenominator;
-            //console.log("finalLikelihood is NOT OK: " + finalLikelihood + "\n");
         }
 
         total_finalLikelihood *= finalLikelihood;
-        //console.log("total_finalLikelihood IS IN LOOP = " + total_finalLikelihood);
     }
 
-    //console.log("total_finalLikelihood BEFORE COUNT CLASS = " + total_finalLikelihood);
     total_finalLikelihood *= countClass;
-    // console.log("total_finalLikelihood = " + total_finalLikelihood);
     return total_finalLikelihood;
 };
 
@@ -637,10 +626,8 @@ var calculateNormalisedProbability = function (LikelihoodTrue, LikelihoodFalse, 
 //Using the training data set to test:
 var classify = function (Data, TestSet, laplace) {
     var originData = JSON.parse(JSON.stringify(Data));
-    //console.log("getLikelihood_entire: original: " + JSON.stringify(originData));
 
     var toReturn = JSON.parse(JSON.stringify(TestSet));
-    //console.log("getLikelihood_entire: toReturn: " + JSON.stringify(toReturn));
 
     var attributeList = Object.keys(toReturn[0]);
     var classAttr = attributeList[attributeList.length - 1];
@@ -659,7 +646,6 @@ var classify = function (Data, TestSet, laplace) {
     var n = 0;
     var j = 0;
     toReturn.forEach((dict) => {
-        //console.log("Considering: " + JSON.stringify(dict));
         results = [];
         sum_likelihood = 0;
 
@@ -676,36 +662,24 @@ var classify = function (Data, TestSet, laplace) {
             sum_likelihood += eachResult.likelihood;
         });
 
-        //If sum = 0:
-        /*
-        if (sum_likelihood === 0){
-            sum_likelihood =1;
-        }
-        */
-
         //Get normalised probability:
         j = 0;
         results.forEach((result) => {
             results[j].normalised_probability = (result.likelihood / sum_likelihood);
-            //console.log('normalised_probability for ' + JSON.stringify(result.class_name) + ' = ' + result.likelihood + '/' + sum_likelihood);
             j = j + 1;
 
         });
-        //console.log("===> Results in getLikelihood_entire:" + JSON.stringify(results));
         //Get the highest probability:
         theHighestProbability = results[0].normalised_probability;
         theHighestProbability_class = results[0].class_name;
-        //console.log("theHighestProbability TEMP: " + theHighestProbability + " which is " + results[0].class_name);
 
         results.forEach((each) => {
             if (each.normalised_probability > theHighestProbability) {
                 theHighestProbability = each.normalised_probability;
                 theHighestProbability_class = each.class_name;
-                //console.log("final theHighestProbability_class: " + theHighestProbability_class);
             }
         });
 
-        //console.log("\n");
         toReturn[n][classAttr] = theHighestProbability_class;
         n++;
     });
