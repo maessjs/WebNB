@@ -33,6 +33,15 @@ var correctOrNot;
 var k = 1;
 var confusionMatrix;
 
+var trainingDataFilename = '';
+
+var generalStatus = {
+    trainingDataUploaded: false,
+    trainingDataFilename: null,
+    tested: false,
+    testingMode: 0
+};
+
 //HOME PAGE:
 router.get('/', function (req, res, next) {
     //res.render('index.html', {uploadedMessage: 'Waiting for upload', tableOriginal: "CP3403", tableToShow: "CP3403"});
@@ -40,6 +49,12 @@ router.get('/', function (req, res, next) {
 
 router.get('/api/reset', function (req, res, next) {
     deleteUploaded();
+    generalStatus = {
+        trainingDataUploaded: false,
+        trainingDataFilename: null,
+        tested: false,
+        testingMode: 0
+    };
 });
 
 //WHEN USER CLICKS ON DOWNLOAD SAMPLE DATASET:
@@ -49,7 +64,7 @@ router.get('/api/download', function (req, res, next) {
 });
 
 //API FOR FETCHING ENTIRE ORIGINAL UPLOADED DATA:
-router.get('/fetch-data', function (req, res, next) {
+router.get('/api/fetch-data', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(csvBody));
     console.log(csvBody);
@@ -57,51 +72,51 @@ router.get('/fetch-data', function (req, res, next) {
 
 
 //API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/fetch-data-numeric', function (req, res, next) {
+router.get('/api/fetch-data-numeric', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(csvBodyNumeric));
 });
 
 //API FOR FETCHING CORRECTNESS TABLE:
-router.get('/fetch-correctness', function (req, res, next) {
+router.get('/api/fetch-correctness', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(correctOrNot));
 });
 
 
 //API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/fetch-data-numeric-normalised', function (req, res, next) {
+router.get('/api/fetch-data-numeric-normalised', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(csvBodyNumericNormalised));
 });
 
 //API FOR FETCHING CLASSIFIED DATA
-router.get('/fetch-data-classified', function (req, res, next) {
+router.get('/api/fetch-data-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(classifiedSet));
 });
 
 
 //API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/fetch-accuracy', function (req, res, next) {
+router.get('/api/fetch-accuracy', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(detailedAccuracy));
 });
 
 //API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/fetch-evidence-statistics-original', function (req, res, next) {
+router.get('/api/fetch-evidence-statistics-original', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(gatherDataForEvidence(csvBody)));
 });
 
 //API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/fetch-evidence-statistics-classified', function (req, res, next) {
+router.get('/api/fetch-evidence-statistics-classified', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(gatherDataForEvidence(classifiedSet)));
 });
 
 //GET DATA FOR CHART:
-router.get('/fetch-evidence-for-chart', function (req, res, next) {
+router.get('/api/fetch-evidence-for-chart', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
 
     var nummericData = getNumeric.getNumericAttributes(csvBody);
@@ -117,6 +132,12 @@ router.get('/fetch-evidence-for-chart', function (req, res, next) {
 router.get('/api/fetch-confusion-matrix', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(confusionMatrix));
+});
+
+//GET THE STATUS
+router.get('/api/status', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(generalStatus));
 });
 
 //RETURN THE CLASSIFIED SET WITH K-FOLD VALIDATION
@@ -185,6 +206,15 @@ router.post('/api/test-cv', function (req, res, next) {
     toReturn.correctness = correctOrNot;
     toReturn.detailed_accuracy = detailedAccuracy;
     toReturn.confusion_matrix = confusionMatrix;
+
+    //UPDATE GENERAL STATUS:
+    generalStatus.tested = true;
+    if (k === 1){
+        generalStatus.testingMode = 1;
+    } else {
+        generalStatus.testingMode = 2;
+    }
+
     res.end(JSON.stringify(toReturn));
 });
 
@@ -246,6 +276,10 @@ router.post('/api/test-up', function (req, res, next) {
                     toReturn.detailed_accuracy = detailedAccuracy;
                     toReturn.confusion_matrix = confusionMatrix;
 
+                    //UPDATE GENERAL STATUS:
+                    generalStatus.tested = true;
+                    generalStatus.testingMode = 3;
+
                     res.status(202).end(JSON.stringify(toReturn));
                 })
                 .then(() => {
@@ -261,13 +295,6 @@ router.post('/submit-form', (req, res, next) => {
 
     var form = new formidable.IncomingForm();
 
-    var csvIsEmpty;
-    if (csvBody == null) {
-        csvIsEmpty = 'Before this, the CSV Body is empty';
-    } else {
-        csvIsEmpty = 'Before this, the CSV Body is NOT empty';
-    }
-
     form.encoding = "utf-8";
     form.parse(req);
 
@@ -277,7 +304,7 @@ router.post('/submit-form', (req, res, next) => {
         var dir_name = str.substring(0, str.length - 7);
 
         file.path = dir_name + "/uploads/" + file.name;
-        console.log("The file path is " + file.path);
+        trainingDataFilename = file.name;
 
         setTimeout(() => {
             csv()
@@ -295,6 +322,12 @@ router.post('/submit-form', (req, res, next) => {
 
                     //CALC EACH ATTRIBUTE:
                     csvContentJson = gatherDataForEvidence(csvBody, false);
+
+                    //UPDATE GENERAL STATUS:
+                    generalStatus.trainingDataUploaded = true;
+                    generalStatus.trainingDataFilename = trainingDataFilename;
+                    generalStatus.tested = false;
+                    generalStatus.testingMode = 0;
 
                     res.status(201).send();
 

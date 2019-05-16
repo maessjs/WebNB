@@ -37,7 +37,7 @@ export default {
   },
   methods: {
     fetchData() {
-      axios.get('http://localhost:3000/fetch-data')
+      axios.get('http://localhost:3000/api/fetch-data')
       .then(res => {
         this.generateChartData(res.data)
       })
