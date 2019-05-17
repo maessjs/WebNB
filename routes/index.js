@@ -170,19 +170,11 @@ router.post('/api/test-cv', function (req, res, next) {
 
     classifiedSet = [];
 
-    confusionMatrix = {
-        //the outer KEY is actual classes, the inner key is classified classes:
-        'yes': {
-            'yes': 0,
-            'no': 0
-        },
-        'no': {
-            'yes': 0,
-            'no': 0
-        }
-    };
+    confusionMatrix = buildConfusionMatrix(csvBody);
+    
     let tempTestSet;
     let tempTestSetClassified;
+
     while (instance_cursor < csvBody.length) {
         tempTestSet = csvBody.slice(instance_cursor, instance_cursor + amountOfInstances_eachTestSet);
         if (tempTestSet !== []) {
@@ -245,17 +237,7 @@ router.post('/api/test-up', function (req, res, next) {
                 .fromFile(file.path)
                 .then((jsonObj) => {
                     classifiedSet = [];
-                    confusionMatrix = {
-                        //the outer KEY is actual classes, the inner key is classified classes:
-                        'yes': {
-                            'yes': 0,
-                            'no': 0
-                        },
-                        'no': {
-                            'yes': 0,
-                            'no': 0
-                        }
-                    };
+                    confusionMatrix = buildConfusionMatrix(csvBody);
                     testSet = JSON.parse(JSON.stringify(jsonObj));
 
                     classifiedSet = classify(csvBody,testSet,laplace);
@@ -303,7 +285,7 @@ router.get('/api/download-classified', function (req, res, next) {
         if (err) throw err;
         fs.writeFile(file, csv, 'utf8', function(err) {
           if (err) {
-            console.log('Some error occured - file either not saved or corrupted file saved.');
+            console.log('Some error occured: file either not saved or corrupted.');
           } else {
             console.log('It\'s saved!');
             res.download(file);
@@ -370,7 +352,7 @@ module.exports = {router: router, csvBody: "OK"};
 
 //------------------------------------------------------------------------------------------------
 
-//K-FOLD VALIDATION:
+//UPDATE THE CONTINGENCY TABLE:
 const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribute, ConfusionMatrixTemplate) {
     //!\The test set and the classified set must have the same number of rows
     //classAttribute will be 'y'
@@ -381,17 +363,10 @@ const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribu
     let originalData = JSON.parse(JSON.stringify(OriginalSet));
     let classifiedData = JSON.parse(JSON.stringify(ClassifiedSet));
 
-    //ConfusionMatrixTemplate.forEach((each) => {
     classList = (Object.keys(ConfusionMatrixTemplate));
-    // });
-
-    //classList = [...new Set(classList)];
-    //console.log('classList = ' + classList);
 
     let length_to_test = ClassifiedSet.length;
-    //console.log('ClassifiedSet.length = ' + ClassifiedSet.length);
 
-    //Getting the False ones:
     classList.forEach((actualClass) => {
         classList.forEach((classifiedClass) => {
                 for (let m = 0; m < length_to_test; m++) {
@@ -408,6 +383,25 @@ const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribu
 
 
 //------------------------------------------------------------------------------------------------
+
+//Function build confusion matrix:
+const buildConfusionMatrix = function(Data){
+    let data = JSON.parse(JSON.stringify(Data));
+    let classCol = exportClass(data);
+    let classList = [];
+    let confusion_table = {};
+    data.forEach((dict) => {
+        classList.push(dict[classCol])
+    });
+    classList = [...new Set(classList)];
+    classList.forEach((actualClass) => {
+        confusion_table[actualClass] = {}
+        classList.forEach((predictedsClass) => {
+            confusion_table[actualClass][predictedsClass] = 0;
+        });
+    });
+    return confusion_table;
+};
 
 //Function to reset/delete the dataset:
 const deleteUploaded = function () {
@@ -691,7 +685,8 @@ var classify = function (Data, TestSet, laplace) {
     var attributeList = Object.keys(toReturn[0]);
     var classAttr = attributeList[attributeList.length - 1];
     var classList = [];
-    toReturn.forEach((dict) => {
+
+    originData.forEach((dict) => {
         classList.push(dict[classAttr])
     });
     classList = [...new Set(classList)];

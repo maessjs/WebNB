@@ -1,2 +1,2 @@
 age,job,marital,education,default,balance,housing,loan,contact,day,month,duration,campaign,pdays,previous,poutcome,y
-39,admin.,married,secondary,no,607,yes,no,cellular,12,may,454,2,364,3,failure,no
+39,admin.,married,secondary,no,607,yes,no,cellular,12,may,454,2,364,3,failure,yes

@@ -7,8 +7,8 @@ module.exports = {
             'Incorrect': 0
         };
 
-        var originalAttributeList = Object.keys(originalData[1]);
-        var classifiedAttributeList = Object.keys(classifiedData[1]);
+        var originalAttributeList = Object.keys(originalData[0]);
+        var classifiedAttributeList = Object.keys(classifiedData[0]);
 
         //console.log(originalAttributeList);
         //console.log(classifiedAttributeList);
