@@ -15,6 +15,7 @@ var router = express.Router();
 const app = express();
 var formidable = require('formidable');
 var csv = require('csvtojson');
+const RESULT_TO_ARRAY  = true;
 
 var csvContent_String;
 var classifiedSet;
@@ -173,12 +174,18 @@ router.post('/api/test-cv', function (req, res, next) {
     confusionMatrix = buildConfusionMatrix(csvBody);
     
     let tempTestSet;
+    let tempTrainingSet = JSON.parse(JSON.stringify(csvBody));
     let tempTestSetClassified;
 
     while (instance_cursor < csvBody.length) {
+        //Restore the tempTrainingSet to full csvBody:
+        tempTrainingSet = JSON.parse(JSON.stringify(csvBody));
+        //Make the test set:
         tempTestSet = csvBody.slice(instance_cursor, instance_cursor + amountOfInstances_eachTestSet);
+        //Substract the training set based on k-fold validation:
+        tempTrainingSet.splice(instance_cursor, amountOfInstances_eachTestSet);
         if (tempTestSet !== []) {
-            tempTestSetClassified = classify(csvBody, tempTestSet, laplace);
+            tempTestSetClassified = classify(tempTrainingSet, tempTestSet, laplace);
             updateConfusionMatrix(tempTestSet, tempTestSetClassified, exportClass(csvBody), confusionMatrix);
         }
         classifiedSet = classifiedSet.concat(tempTestSetClassified);
@@ -195,10 +202,17 @@ router.post('/api/test-cv', function (req, res, next) {
         confusion_matrix: null,
     };
 
-    toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
-    toReturn.correctness = correctOrNot;
-    toReturn.detailed_accuracy = detailedAccuracy;
-    toReturn.confusion_matrix = confusionMatrix;
+    if (RESULT_TO_ARRAY === true) {
+        toReturn.first_15rows_results = toArray_oneDim(classifiedSet.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
+        toReturn.correctness = toArray_oneDim(correctOrNot);
+        toReturn.detailed_accuracy = toArray_oneDim(detailedAccuracy);
+        toReturn.confusion_matrix = toArray_twoDim(confusionMatrix);
+    }else{
+        toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
+        toReturn.correctness = correctOrNot;
+        toReturn.detailed_accuracy = detailedAccuracy;
+        toReturn.confusion_matrix = confusionMatrix; 
+    }
 
     //UPDATE GENERAL STATUS:
     generalStatus.tested = true;
@@ -254,10 +268,18 @@ router.post('/api/test-up', function (req, res, next) {
                         confusion_matrix: null,
                     };
                 
-                    toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
-                    toReturn.correctness = correctOrNot;
-                    toReturn.detailed_accuracy = detailedAccuracy;
-                    toReturn.confusion_matrix = confusionMatrix;
+                    if (RESULT_TO_ARRAY === true) {
+                        toReturn.first_15rows_results = toArray_oneDim(classifiedSet.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
+                        toReturn.correctness = toArray_oneDim(correctOrNot);
+                        toReturn.detailed_accuracy = toArray_oneDim(detailedAccuracy);
+                        toReturn.confusion_matrix = toArray_twoDim(confusionMatrix);
+                    }
+                    else {
+                        toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
+                        toReturn.correctness = correctOrNot;
+                        toReturn.detailed_accuracy = detailedAccuracy;
+                        toReturn.confusion_matrix = confusionMatrix;
+                    }
 
                     //UPDATE GENERAL STATUS:
                     generalStatus.tested = true;
@@ -468,6 +490,7 @@ const getGeneralCount = function (data) {
         evidenceAttributeList['values'] = values;
 
         //Get the total:
+        count = 0;
         values.forEach((aValue) => {
             count ++;
         });
@@ -736,6 +759,57 @@ var classify = function (Data, TestSet, laplace) {
 
         toReturn[n][classAttr] = theHighestProbability_class;
         n++;
+    });
+    return toReturn;
+};
+
+//------------------------------------------------------------------------------------------------
+
+//Convert Dictionary to arrays:
+const toArray_oneDim = function(Data){
+    let data = JSON.parse(JSON.stringify(Data));
+    let toReturn = [];
+
+    if (isDict(data) == false){
+        toReturn.push(Object.keys(data[0]));
+        //Getting the contents:
+        data.forEach((each)=>{
+            toReturn.push(Object.values(each));
+        });
+    } else {
+        toReturn.push(Object.keys(data));
+        toReturn.push(Object.values(data));
+    }
+    return toReturn;
+};
+
+const isDict = function(v) {
+    return typeof v==='object' && v!==null && !(v instanceof Array) && !(v instanceof Date);
+}
+
+const toArray_twoDim = function(dict){
+    let data = JSON.parse(JSON.stringify(dict));
+    let toReturn = [];
+    let headers_X = [""];
+    let eachRow = [];
+
+    //Getting the header X:
+    Object.keys(data).forEach((aKey)=>{
+        Object.keys(data[aKey]).forEach((aDict)=>{
+            headers_X.push(aDict);
+        });
+    });
+    headers_X = [...new Set(headers_X)];
+    toReturn.push(headers_X);
+
+    //Getting each row to whole:
+    Object.keys(data).forEach((aKey)=>{
+        eachRow = [];
+        eachRow.push(aKey);
+        Object.values(data[aKey]).forEach((aValue)=>{
+            eachRow.push(aValue);
+        });
+        toReturn.push(eachRow);
     });
     return toReturn;
 };

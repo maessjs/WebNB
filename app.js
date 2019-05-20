@@ -24,7 +24,7 @@ app.set('view engine', 'html');
 app.use('/', indexRouter.router);
 app.use('/users', usersRouter);
 
-// catch 404 and forward to error handler
+/* // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
@@ -41,6 +41,6 @@ app.use(function(err, req, res, next) {
   res.render('error.html',{
     errorMessage: "This is error message for something."
   });
-});
+}); */
 
 module.exports = app;
