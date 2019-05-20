@@ -23,17 +23,20 @@
     </div>
   </div>
 
+  <Table v-if="confusion_matrix" :head="['Class', 'Yes', 'No']" :body="[['Yes', confusion_matrix.yes.yes, confusion_matrix.yes.no], ['No', confusion_matrix.no.yes, confusion_matrix.no.no]]"/>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import Table from '../components/Table.vue'
 //import wip from '../components/wip.vue'
 
 export default {
   name: 'Testing',
   components: {
     //wip 
+    Table
   },
   data () {
     return {
@@ -42,7 +45,11 @@ export default {
       selectedFile: null,
       url2: 'http://localhost:3000/api/test-up',
       reqURL: '',
-      resJSON: ''
+      resJSON: '',
+      resultData: [],
+      correctness: {},
+      detailed_accuracy: [],
+      confusion_matrix: null
     }
   },
   computed: {
@@ -58,7 +65,9 @@ export default {
 
       axios.post(this.reqURL)
       .then(res => {
-        this.resJSON = JSON.stringify(res.data, null, 2)
+        this.resJSON = res.data
+        this.confusion_matrix = res.data.confusion_matrix
+        console.log('this.confusion_matrix:', JSON.stringify(this.confusion_matrix.yes.yes, null, 2))
       })
       .catch(err => console.log('err:', err))
     },
@@ -78,6 +87,7 @@ export default {
         .then(res => { 
           if (res.status === 202) {
             this.resJSON = JSON.stringify(res.data, null, 2);
+
           }
         })
         .catch(err => console.log(err))
