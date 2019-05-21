@@ -1,16 +1,17 @@
 <template>
-  <div>
+  <div class="container">
     <h1>Trainingset Statistics</h1>
-    <div v-if="chartdata" class="grid-container">
+    <div v-if="statisticsData">
       <div
-        v-for="(chart, index) in chartdata"
+        v-for="(attribute, index) in statisticsData"
         :key="'attribute' + index"
         :index="index"
-        class="grid-item"
       >
-        <h3>{{ chart.name }}</h3>
-        <bar-chart :datacollection="chart" />
-
+        <h3>{{ attribute.name }}</h3>
+        <div class="grid-container">
+          <bar-chart :datacollection="attribute.chartdata" class="grid-item" />
+          <SimpleTable :content="mockTableData" class="grid-item" />
+        </div>
       </div>
     </div>
   </div>
@@ -19,85 +20,67 @@
 <script>
 import axios from 'axios'
 
-import BarChart from '../charts/BarChart.vue'
+import BarChart from '../components/BarChart.vue'
+import SimpleTable from '../components/SimpleTable.vue'
 
 export default {
   name: 'TrainingsetStatistics',
   components: {
-    BarChart
+    BarChart,
+    SimpleTable
   },
   data () {
     return {
-      chartdata: {},
-      colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959']
+      statisticsData: null,
+      colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959'],
+      mockTableData: [["This is", "Mock", "Table", "Data"], ["no", 1, null, 0]]
     }
   },
   mounted () {
-    this.fetchData()
+    this.fetchChartData()
   },
   methods: {
-    fetchData() {
-      axios.get('http://localhost:3000/api/fetch-data')
+    fetchChartData() {
+      axios.get('http://localhost:3000/api/fetch-evidence-for-chart')
       .then(res => {
-        this.generateChartData(res.data)
+        console.log('res.data:', JSON.stringify(res.data, null, 2))
+
+        const statisticsData = {}
+
+        for (const attribute in res.data) {
+          statisticsData[attribute] = {
+              name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1)
+            }
+
+          statisticsData[attribute].chartdata = {
+            labels: res.data[attribute].labels,
+            datasets: 
+              [{
+                label: 'All',
+                backgroundColor: this.colors,
+                pointBackgroundColor: 'white',
+                borderWidth: 1,
+                pointBorderColor: '#249EBF',
+                data: res.data[attribute].values
+              }]
+          }
+        }
+        
+        console.log('statisticsData:', JSON.stringify(statisticsData, null, 2))
+        this.statisticsData = statisticsData
       })
       .catch(err => console.log('err:', err))
-    },
-    generateChartData(fetchedData) {
-      const data = {}
-      
-      fetchedData.forEach(instance => {
-        for (const key in instance) {
-          if (instance.hasOwnProperty(key)) {
-            if (data[key]) data[key].push(instance[key])
-            else data[key] = [instance[key]]
-          }
-        }
-      })
-
-      const chartdata = {}
-
-      for (const attribute in data) {
-
-        const numberOfOccurences = {}
-
-        data[attribute].forEach(answer => {
-          if (numberOfOccurences[answer]) numberOfOccurences[answer]++
-            else numberOfOccurences[answer] = 1
-        });
-
-        const labels = []
-        const values = []
-
-        for (const label in numberOfOccurences) {
-          if (numberOfOccurences.hasOwnProperty(label)) {
-            labels.push(label)
-            values.push(numberOfOccurences[label])
-          }
-        }
-
-        chartdata[attribute] = {
-          name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1),
-          labels,
-          datasets: 
-            [{
-              label: '#',
-              backgroundColor: this.colors,
-              pointBackgroundColor: 'white',
-              borderWidth: 1,
-              pointBorderColor: '#249EBF',
-              data: values
-            }]
-        }
-      }
-
-      this.chartdata = chartdata
     }
   }
 }
 </script>
 
 <style scoped>
+
+.container {
+  margin: 0 auto;
+  max-width: 800px;
+}
 
 .grid-container {
   display: grid;
@@ -107,6 +90,7 @@ export default {
 .grid-item {
   grid-area: span 1 / span 1;
   padding: 15px;
+  place-self: center;
 }
 
 </style>
