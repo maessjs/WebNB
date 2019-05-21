@@ -10,18 +10,7 @@ module.exports = {
         var originalAttributeList = Object.keys(originalData[0]);
         var classifiedAttributeList = Object.keys(classifiedData[0]);
 
-        //console.log(originalAttributeList);
-        //console.log(classifiedAttributeList);
-
-        var originClassAttr = originalAttributeList[originalAttributeList.length - 1];
-        var classifiedClassAttr = classifiedAttributeList[classifiedAttributeList.length - 1];
-
-        var originalOne = {};
-        var classifiedOne = {};
-
-        //var i = 0;
         for (var i = 0; i < originalData.length; i++) {
-            //console.log(i);
 
             if (originalData[i]["y"] === classifiedData[i]["y"]) {
                 toReturn.Correct++;

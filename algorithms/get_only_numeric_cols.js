@@ -56,7 +56,7 @@ module.exports = {
 
         var aDictForReturn = {};
 
-        var keyList = Object.keys(dataset[1]);
+        var keyList = Object.keys(dataset[0]);
         var keyListNumeric = [];
 
         keyList.forEach((key) => {
@@ -85,10 +85,11 @@ module.exports = {
 
         var dataset = JSON.parse(JSON.stringify(Data));
         var returnDataset = [];
+        var classCol = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
 
         var aDictForReturn = {};
 
-        var keyList = Object.keys(dataset[1]);
+        var keyList = Object.keys(dataset[0]);
         var keyListNumeric = [];
 
         keyList.forEach((key) => {
@@ -100,6 +101,7 @@ module.exports = {
                 }
             });
         });
+        keyListNumeric.push(classCol);
 
         dataset.forEach((dict) => {
             aDictForReturn = {};

@@ -49,7 +49,7 @@ router.get('/', function (req, res, next) {
     //res.render('index.html', {uploadedMessage: 'Waiting for upload', tableOriginal: "CP3403", tableToShow: "CP3403"});
 });
 
-router.get('/api/reset', function (req, res, next) {
+router.delete('/api/reset', function (req, res, next) {
     deleteUploaded();
     generalStatus = {
         trainingDataUploaded: false,
@@ -105,18 +105,6 @@ router.get('/api/fetch-accuracy', function (req, res, next) {
     res.end(JSON.stringify(detailedAccuracy));
 });
 
-//API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/api/fetch-evidence-statistics-original', function (req, res, next) {
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(gatherDataForEvidence(csvBody)));
-});
-
-//API FOR FETCHING ONLY NUMERIC DATA:
-router.get('/api/fetch-evidence-statistics-classified', function (req, res, next) {
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(gatherDataForEvidence(classifiedSet)));
-});
-
 //GET DATA FOR CHART:
 router.get('/api/fetch-evidence-for-chart', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
@@ -125,7 +113,7 @@ router.get('/api/fetch-evidence-for-chart', function (req, res, next) {
     var nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
 
     var toFetch = {};
-    toFetch = Object.assign({}, getGeneralCount(nummericData), getGeneralCount(nonNummericData));
+    toFetch = Object.assign({}, getGeneralCount(nummericData, true), getGeneralCount(nonNummericData, false));
 
     res.end(JSON.stringify(toFetch));
 });
@@ -140,6 +128,13 @@ router.get('/api/fetch-confusion-matrix', function (req, res, next) {
 router.get('/api/status', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(generalStatus));
+});
+
+//GET THE STATUS
+router.get('/api/train', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    let k = req.query.k;
+    res.end(JSON.stringify(exportBestModelTrainingSet(csvBody, k, laplace)));
 });
 
 //RETURN THE CLASSIFIED SET WITH K-FOLD VALIDATION
@@ -178,12 +173,19 @@ router.post('/api/test-cv', function (req, res, next) {
     let tempTestSetClassified;
 
     while (instance_cursor < csvBody.length) {
+
         //Restore the tempTrainingSet to full csvBody:
         tempTrainingSet = JSON.parse(JSON.stringify(csvBody));
+
         //Make the test set:
         tempTestSet = csvBody.slice(instance_cursor, instance_cursor + amountOfInstances_eachTestSet);
+
         //Substract the training set based on k-fold validation:
-        tempTrainingSet.splice(instance_cursor, amountOfInstances_eachTestSet);
+        if (k===1){
+        }else{
+            tempTrainingSet.splice(instance_cursor, amountOfInstances_eachTestSet);
+        }
+
         if (tempTestSet !== []) {
             tempTestSetClassified = classify(tempTrainingSet, tempTestSet, laplace);
             updateConfusionMatrix(tempTestSet, tempTestSetClassified, exportClass(csvBody), confusionMatrix);
@@ -244,6 +246,7 @@ router.post('/api/test-up', function (req, res, next) {
         let dir_name = str.substring(0, str.length - 7);
 
         file.path = dir_name + "/uploads/" + file.name;
+        console.log('/api/test-up with csvBody => csvBody.length = ' + csvBody.length);
         console.log('/api/test-up = ' + file.path);
 
         setTimeout(() => {
@@ -350,9 +353,6 @@ router.post('/submit-form', (req, res, next) => {
                     csvBodyNumeric = getNumeric.getNumericAttributes(csvBody);
                     csvBodyNumericNormalised = getNumeric.getNumericAttributesNormalised(csvBody);
 
-                    //CALC EACH ATTRIBUTE:
-                    csvContentJson = gatherDataForEvidence(csvBody, false);
-
                     //UPDATE GENERAL STATUS:
                     generalStatus.trainingDataUploaded = true;
                     generalStatus.trainingDataFilename = trainingDataFilename;
@@ -373,6 +373,79 @@ router.post('/submit-form', (req, res, next) => {
 module.exports = {router: router, csvBody: "OK"};
 
 //------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+//SELECT THE BEST TRAINING DATASET:
+const exportBestModelTrainingSet =  function(OriginalSet,  number_k, laplace){
+
+    let originalSet = JSON.parse(JSON.stringify(OriginalSet));
+
+    let amountOfInstances_eachTestSet;
+    let instance_cursor;
+    let correctOrNot;
+    let accuracy;
+    let accuracyTable  = {};
+    let classifiedSet = [];
+    
+    let tempTestSet;
+    let tempTrainingSet = JSON.parse(JSON.stringify(originalSet));
+    let tempTestSetClassified;
+
+    let k = 1;
+
+    while (k <= number_k) {   
+        amountOfInstances_eachTestSet = Math.floor(originalSet.length / k);
+        accuracyTable["k=" + k] = {};
+        instance_cursor = 0;
+        while (instance_cursor < originalSet.length) {
+
+            //Restore the tempTrainingSet to full originalSet:
+            tempTrainingSet = JSON.parse(JSON.stringify(originalSet));
+
+            //Make the test set:
+            tempTestSet = originalSet.slice(instance_cursor, instance_cursor + amountOfInstances_eachTestSet);
+
+            //Substract the training set based on k-fold validation:
+            if (k===1){
+            }else{
+                tempTrainingSet.splice(instance_cursor, amountOfInstances_eachTestSet);
+            }
+            if (tempTestSet !== []) {
+                tempTestSetClassified = classify(tempTrainingSet, tempTestSet, laplace);
+            }
+            correctOrNot = statistics.calcCorectandIncorrectInstances(tempTestSet, tempTestSetClassified);
+            accuracy = correctOrNot.Correct / (correctOrNot.Correct + correctOrNot.Incorrect);
+            accuracyTable["k=" + k]["fold-"+instance_cursor] = accuracy;
+
+            instance_cursor += amountOfInstances_eachTestSet;
+        }
+        k++;
+    }
+
+    let aDict_per_k;
+    let selectionInfo  = {
+        k: null,
+        fold_to_remove: null
+    }
+    let max =0 ;
+
+    //Select the maximum number:
+    (Object.keys(accuracyTable)).forEach((k_value)=>{
+        aDict_per_k = accuracyTable[k_value];
+        (Object.keys(aDict_per_k)).forEach((fold_Value)=>{
+            if (aDict_per_k[fold_Value] > max){
+                max = aDict_per_k[fold_Value];
+                selectionInfo.k = k_value.slice(2);
+                selectionInfo.fold_to_remove = fold_Value.slice(5);
+            }
+        });
+    });
+
+    //Conduct slicing the original data to have the best traing set:
+    originalSet.splice(selectionInfo.k*Math.floor(originalSet.length / k), Math.floor(originalSet.length / k));
+    return accuracyTable;
+}
 
 //UPDATE THE CONTINGENCY TABLE:
 const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribute, ConfusionMatrixTemplate) {
@@ -446,7 +519,7 @@ const deleteUploaded = function () {
 
 //The grande collection of naive bayes functions:
 
-const getGeneralCount = function (data) {
+const getGeneralCount = function (data, isNumeric) {
 
     var evidenceList = {};
 
@@ -469,6 +542,10 @@ const getGeneralCount = function (data) {
 
     console.log("classifierOutcomeList: " + classifierOutcomeList);
 
+    if (isNumeric ===true){
+        keysOfData.pop();
+    }
+
     keysOfData.forEach((aKey) => {
         evidenceAttributeList = {};
         Data.forEach((element) => {
@@ -488,13 +565,7 @@ const getGeneralCount = function (data) {
         evidenceAttributeList = {};
         evidenceAttributeList['labels'] = labels;
         evidenceAttributeList['values'] = values;
-
-        //Get the total:
-        count = 0;
-        values.forEach((aValue) => {
-            count ++;
-        });
-        evidenceAttributeList['count'] = count + " instances";
+        evidenceAttributeList['table'] = toArray_twoDim(gatherDataForEvidence(Data,aKey, isNumeric, false));
 
         evidenceList[aKey] = evidenceAttributeList;
     });
@@ -502,12 +573,12 @@ const getGeneralCount = function (data) {
     return evidenceList;
 };
 
-var exportClass = function (Data) {
+const exportClass = function (Data) {
     var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
     return finalColName;
 };
 
-var exportClassifierOutcomeList = function (Data) {
+const exportClassifierOutcomeList = function (Data) {
     var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
     var classifierOutcomeList = [];
     Data.forEach((element) => {
@@ -517,13 +588,12 @@ var exportClassifierOutcomeList = function (Data) {
     return classifierOutcomeList;
 };
 
-var gatherDataForEvidence = function (data, laplace) {
+const gatherDataForEvidence = function (data, key, isNumeric, laplace) {
     var Data = JSON.parse(JSON.stringify(data));
     var evidenceList = {};
-    var keysOfData = Object.keys(Data[0]);
     var evidenceAttributeList = {};
     var anEvidenceAttribute = "";
-
+    let aKey = key;
     var value;
     let count = {};
 
@@ -533,30 +603,50 @@ var gatherDataForEvidence = function (data, laplace) {
     classCol = exportClass(Data);
     classifierOutcomeList = exportClassifierOutcomeList(Data);
     classifierOutcomeList = [...new Set(classifierOutcomeList)];
+    
+    evidenceAttributeList = {};
+    Data.forEach((element) => {
+        anEvidenceAttribute = (element[aKey]);
+        evidenceAttributeList[anEvidenceAttribute] = "";
 
-    keysOfData.forEach((aKey) => {
-        //count = {};
-        evidenceAttributeList = {};
-        Data.forEach((element) => {
-            anEvidenceAttribute = (element[aKey]);
-            evidenceAttributeList[anEvidenceAttribute] = "";
-
-            value = {};
-            classifierOutcomeList.forEach((aClass) => {
-                /* value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace)
-                    + "/"
-                    + ProbalityDenominator(Data, aKey, classCol, aClass, laplace)); */
-                value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace));
-                
-            });
-            evidenceAttributeList[anEvidenceAttribute] = value;
-        });
+        value = {};
         classifierOutcomeList.forEach((aClass) => {
-            count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
+            value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace));
         });
-        evidenceAttributeList['count'] = count;
-        evidenceList[aKey] = evidenceAttributeList;
+        evidenceAttributeList[anEvidenceAttribute] = value;
     });
+    classifierOutcomeList.forEach((aClass) => {
+        count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
+    });
+    evidenceAttributeList['count'] = count;
+    evidenceList = evidenceAttributeList;
+
+    //Handling if the return contains only numeric:
+    if (isNumeric === true){
+        let min, max, mean, stddev;
+
+        evidenceList = {};
+
+        evidenceList.min = {};
+        evidenceList.max = {};
+        evidenceList.mean = {};
+        evidenceList.stddev = {};
+        evidenceList['count'] = {};
+
+        classifierOutcomeList.forEach((aClass)=>{
+            mean = getMeanIf(Data, key, classCol,aClass);
+            stddev = getStdDeviationIf(Data, key, classCol,aClass);
+            min = getMinMaxIf('min',Data, key, classCol,aClass);
+            max = getMinMaxIf('max',Data, key, classCol,aClass);
+            evidenceList.min[aClass] = min;
+            evidenceList.max[aClass] = max;
+            evidenceList.mean[aClass] = mean;
+            evidenceList.stddev[aClass] = stddev;
+            count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
+            evidenceList['count'][aClass] = count[aClass];
+        })
+    }
+
     return evidenceList;
 };
 
@@ -596,19 +686,7 @@ var ProbalityDenominator = function (Data, Evidence, Class, ClassifierOutcome, l
     return count;
 };
 
-var EvidenceAttributeList = {
-    job: 'unemployed',
-    marital: 'married',
-    education: 'primary',
-    default: 'no',
-    housing: 'no',
-    loan: 'no',
-    contact: 'cellular',
-    month: 'oct',
-    poutcome: 'unknown',
-    y: 'no'
-};
-
+//Get mean and standard deviation:
 var getMean = function (Data, Attribute_Need_To_findMean) {
     var data = JSON.parse(JSON.stringify(Data));
     var sumAll = 0;
@@ -617,7 +695,6 @@ var getMean = function (Data, Attribute_Need_To_findMean) {
         sumAll += parseFloat(aDict[Attribute_Need_To_findMean]);
         n++;
     });
-    //console.log(sumAll + "/" + n + " = " + (sumAll / n));
     return (sumAll / n);
 };
 
@@ -634,7 +711,56 @@ var getStdDeviation = function (Data, Attribute_Need_To_findStdDev) {
         n++;
     });
     return (numeratorOfStdDev / (n - 1));
+};
 
+//Get mean and standard deviation WITH CONDITION:
+var getMeanIf = function (Data, Attribute_Need_To_findMean,classCol, class_to_findMean) {
+    var data = JSON.parse(JSON.stringify(Data));
+    var sumAll = 0;
+    var n = 0;
+    data.forEach((aDict) => {
+        if (aDict[classCol] === class_to_findMean){
+            sumAll += parseFloat(aDict[Attribute_Need_To_findMean]);
+            n++;
+        }
+    });
+    return (sumAll / n);
+};
+
+var getMinMaxIf = function (MinOrMax, Data, Attribute_Need_To_findMean,classCol, class_to_findMean) {
+    var data = JSON.parse(JSON.stringify(Data));
+    var sumAll = [];
+    var n = 0;
+    data.forEach((aDict) => {
+        if (aDict[classCol] === class_to_findMean){
+            sumAll.push(parseFloat(aDict[Attribute_Need_To_findMean]));
+            n++;
+        }
+    });
+    let toReturn;
+    if (MinOrMax === "min"){
+        toReturn = Math.min.apply(null,sumAll);
+    } else {
+        toReturn = Math.max.apply(null,sumAll);
+    }
+    return toReturn;
+};
+
+var getStdDeviationIf = function (Data, Attribute_Need_To_findStdDev,classCol, class_to_findStdDev) {
+    var numeratorOfStdDev = 0;
+    var mean = getMeanIf(Data, Attribute_Need_To_findStdDev,classCol, class_to_findStdDev);
+    var x;
+    var data = JSON.parse(JSON.stringify(Data));
+    var n = 0;
+
+    data.forEach((aDict) => {
+        if (aDict[classCol] === class_to_findStdDev){
+            x = aDict[Attribute_Need_To_findStdDev];
+            numeratorOfStdDev += Math.abs(Math.pow((x - mean), 2));
+            n++;
+        }
+    });
+    return (numeratorOfStdDev / (n - 1));
 };
 
 //THE LAPLACE will applied in this function:
@@ -787,6 +913,7 @@ const isDict = function(v) {
     return typeof v==='object' && v!==null && !(v instanceof Array) && !(v instanceof Date);
 }
 
+//The following 'twoDim' take the outter dict as row beginner, and inner dict as column header:
 const toArray_twoDim = function(dict){
     let data = JSON.parse(JSON.stringify(dict));
     let toReturn = [];
