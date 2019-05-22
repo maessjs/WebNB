@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dirtyinstall": "npm install && npm run dirtyfix",
-    "dirtyfix": "rm ./node_modules/chartjs-chart-box-and-violin-plot/build/Chart.BoxPlot.mjs",
+    "dirtyfix": "rm ./node_modules/chartjs-chart-box-and-violin-plot/build/Chart.BoxPlot.mjs || true",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"

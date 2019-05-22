@@ -10,7 +10,7 @@
         <h3>{{ attribute.name }}</h3>
         <div class="grid-container">
           <BarChart :datacollection="attribute.chartdata" class="grid-item" />
-          <SimpleTable :content="mockTableData" class="grid-item" />
+          <SimpleTable :content="attribute.table" class="grid-item" />
         </div>
       </div>
     </div>
@@ -23,20 +23,19 @@ import axios from 'axios'
 
 import BarChart from '../components/BarChart.vue'
 // import BoxPlotChart from '../components/BoxPlotChart.js'
-// import SimpleTable from '../components/SimpleTable.vue'
+import SimpleTable from '../components/SimpleTable.vue'
 
 export default {
   name: 'TrainingsetStatistics',
   components: {
     BarChart,
     // BoxPlotChart,
-    // SimpleTable
+    SimpleTable
   },
   data () {
     return {
       statisticsData: null,
       colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959'],
-      mockTableData: [["This is", "Mock", "Table", "Data"], ["no", 1, null, 0]],
       bpdata1: {
         labels: ['#'],
         datasets: [
@@ -81,11 +80,14 @@ export default {
         const statisticsData = {}
 
         for (const attribute in res.data) {
+          console.log('res.data[attribute]:', JSON.stringify(res.data[attribute], null, 2))
+
           statisticsData[attribute] = {
-              name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1)
+              name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1),
+              table: res.data[attribute].table
             }
 
-          console.log('res.data[attribute].values[0]:', res.data[attribute].labels[0])
+          
 
           if (isNaN(res.data[attribute].labels[0])) {
             statisticsData[attribute].isNumerical = true
