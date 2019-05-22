@@ -9,11 +9,12 @@
       >
         <h3>{{ attribute.name }}</h3>
         <div class="grid-container">
-          <bar-chart :datacollection="attribute.chartdata" class="grid-item" />
+          <BarChart :datacollection="attribute.chartdata" class="grid-item" />
           <SimpleTable :content="mockTableData" class="grid-item" />
         </div>
       </div>
     </div>
+    <!-- <BoxPlotChart class="grid-item" :chart-data="bpdata1" /> -->
   </div>
 </template>
 
@@ -21,19 +22,51 @@
 import axios from 'axios'
 
 import BarChart from '../components/BarChart.vue'
-import SimpleTable from '../components/SimpleTable.vue'
+// import BoxPlotChart from '../components/BoxPlotChart.js'
+// import SimpleTable from '../components/SimpleTable.vue'
 
 export default {
   name: 'TrainingsetStatistics',
   components: {
     BarChart,
-    SimpleTable
+    // BoxPlotChart,
+    // SimpleTable
   },
   data () {
     return {
       statisticsData: null,
       colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959'],
-      mockTableData: [["This is", "Mock", "Table", "Data"], ["no", 1, null, 0]]
+      mockTableData: [["This is", "Mock", "Table", "Data"], ["no", 1, null, 0]],
+      bpdata1: {
+        labels: ['#'],
+        datasets: [
+          {
+            label: "All",
+            backgroundColor: "#f87979",
+            data: [[2,45,65,42,1,3,8,55,43,22,11,4,6,7,4,2,1,4,6]]
+          },
+          {
+            label: "Y",
+            backgroundColor: "blue",
+            data: [[43,22,11,4,6,7,4,2,1,4,6]]
+          },
+          {
+            label: "n",
+            backgroundColor: "blue",
+            data: [[2,45,65,42,1,3,8,55]]
+          }
+        ]
+      },
+      bpdata2: {
+        labels: ['#'],
+        datasets: [
+          {
+            label: "All",
+            backgroundColor: "#f87979",
+            data: [[2,45,65,42,1,3,8,55,43,22,11,4,6,7,4,2,1,4,6]]
+          }
+        ]
+      }
     }
   },
   mounted () {
@@ -52,21 +85,42 @@ export default {
               name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1)
             }
 
-          statisticsData[attribute].chartdata = {
-            labels: res.data[attribute].labels,
-            datasets: 
-              [{
-                label: 'All',
-                backgroundColor: this.colors,
-                pointBackgroundColor: 'white',
-                borderWidth: 1,
-                pointBorderColor: '#249EBF',
-                data: res.data[attribute].values
-              }]
+          console.log('res.data[attribute].values[0]:', res.data[attribute].labels[0])
+
+          if (isNaN(res.data[attribute].labels[0])) {
+            statisticsData[attribute].isNumerical = true
+            statisticsData[attribute].chartdata = {
+              labels: res.data[attribute].labels,
+              datasets: 
+                [{
+                  label: 'All',
+                  backgroundColor: this.colors,
+                  pointBackgroundColor: 'white',
+                  borderWidth: 1,
+                  pointBorderColor: '#249EBF',
+                  data: res.data[attribute].values
+                }]
+            }
           }
+          else {
+            statisticsData[attribute].isNumerical = true
+            statisticsData[attribute].chartdata = {
+              labels: res.data[attribute].labels,
+              datasets: 
+                [{
+                  label: 'All',
+                  backgroundColor: this.colors,
+                  pointBackgroundColor: 'white',
+                  borderWidth: 1,
+                  pointBorderColor: '#249EBF',
+                  data: res.data[attribute].values
+                }]
+            }
+          }
+
+          
         }
-        
-        console.log('statisticsData:', JSON.stringify(statisticsData, null, 2))
+
         this.statisticsData = statisticsData
       })
       .catch(err => console.log('err:', err))

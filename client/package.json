@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dirtyinstall": "npm install && npm run dirtyfix",
+    "dirtyfix": "rm ./node_modules/chartjs-chart-box-and-violin-plot/build/Chart.BoxPlot.mjs",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
@@ -10,6 +12,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "chart.js": "^2.8.0",
+    "chartjs-chart-box-and-violin-plot": "^2.1.0",
     "core-js": "^2.6.5",
     "register-service-worker": "^1.6.2",
     "vue": "^2.6.10",
