@@ -2,9 +2,9 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import Welcome from './views/Welcome.vue'
 import DataUpload from './views/DataUpload.vue'
-import DataStatistics from './views/DataStatistics.vue'
+import TrainingsetStatistics from './views/TrainingsetStatistics.vue'
 import Testing from './views/Testing.vue'
-import LoanEvaluator from './views/LoanEvaluator.vue'
+import Evaluator from './views/Evaluator.vue'
 
 Vue.use(Router)
 
@@ -21,9 +21,9 @@ export default new Router({
       component: DataUpload
     },
     {
-      path: '/DataStatistics',
-      name: 'DataStatistics',
-      component: DataStatistics
+      path: '/TrainingsetStatistics',
+      name: 'TrainingsetStatistics',
+      component: TrainingsetStatistics
     },
     {
       path: '/Testing',
@@ -31,9 +31,9 @@ export default new Router({
       component: Testing
     },
     {
-      path: '/LoanEvaluator',
-      name: 'LoanEvaluator',
-      component: LoanEvaluator
+      path: '/Evaluator',
+      name: 'Evaluator',
+      component: Evaluator
     }
   ]
 })

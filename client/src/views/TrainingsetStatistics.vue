@@ -1,16 +1,22 @@
 <template>
   <div class="container">
     <h1>Trainingset Statistics</h1>
-    <div v-if="statisticsData">
-      <div v-for="(attribute, index) in statisticsData" :key="'attribute' + index" :index="index">
-        <h3>{{ attribute.name }}</h3>
-        <p class="typeinfo">{{ attribute.isNumerical ? '(numerical)' : '(categorical)' }}</p>
-        <div class="grid-container">
-          <BarChart v-if="!attribute.isNumerical" class="grid-item" :datacollection="attribute.chartdata" />
-          <BoxPlotChart v-else class="grid-item" :chart-data="attribute.chartdata" />
-          <SimpleTable :content="attribute.table" class="grid-item" />
+    <div v-if="status && status.trainingDataUploaded">
+      <p style="margin-top: -20px;">({{ status.trainingDataFilename }})</p>
+      <div v-if="statisticsData">
+        <div v-for="(attribute, index) in statisticsData" :key="'attribute' + index" :index="index">
+          <h3>{{ attribute.name }}</h3>
+          <p class="typeinfo">{{ attribute.isNumerical ? '(numerical)' : '(categorical)' }}</p>
+          <div class="grid-container">
+            <BarChart v-if="!attribute.isNumerical" class="grid-item" :datacollection="attribute.chartdata" />
+            <BoxPlotChart v-else class="grid-item" :chart-data="attribute.chartdata" />
+            <SimpleTable :content="attribute.table" class="grid-item" />
+          </div>
         </div>
       </div>
+    </div>
+    <div v-else>
+      <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
     </div>
   </div>
 </template>
@@ -31,6 +37,7 @@
     },
     data() {
       return {
+        status: null,
         statisticsData: null,
         colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959'],
         boxplotMockData: {
@@ -40,15 +47,26 @@
         }
       }
     },
-    mounted() {
-      this.fetchChartData()
+    watch: {
+      status: function() {
+        if (this.status && this.status.trainingDataUploaded) this.fetchChartData()
+      }
+    },
+    created() {
+      this.getStatus()
     },
     methods: {
+      getStatus() {
+        axios.get('http://localhost:3000/api/status')
+          .then(res => {
+            if (res.status == 200) this.status = res.data
+            else console.log('Invalid status response')
+          })
+          .catch(err => console.log(err))
+      },
       fetchChartData() {
         axios.get('http://localhost:3000/api/fetch-evidence-for-chart')
           .then(res => {
-            console.log('res.data:', JSON.stringify(res.data, null, 2))
-
             const statisticsData = {}
 
             for (const attribute in res.data) {

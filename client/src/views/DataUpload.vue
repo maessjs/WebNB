@@ -50,7 +50,6 @@ export default {
         .then(res => {
           if (res.status == 200) this.status = res.data
           else console.log('Invalid status response')
-          console.log('res.data:', JSON.stringify(res.data, null, 2))
         })
         .catch(err => console.log(err))
     },
@@ -70,7 +69,7 @@ export default {
         .then(res => { 
           if (res.status === 201) {
             this.success = true; 
-            this.$router.push({ path: 'DataStatistics' })
+            this.$router.push({ path: 'TrainingsetStatistics' })
           }
         })
         .catch(err => console.log(err))
@@ -80,7 +79,6 @@ export default {
         .then(res => {
           if (res.status == 202) this.status = res.data
           else console.log('Invalid status response')
-          console.log('res.data:', JSON.stringify(res.data, null, 2))
         })
         .catch(err => console.log(err))
     }
