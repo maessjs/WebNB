@@ -57,6 +57,8 @@ router.delete('/api/reset', function (req, res, next) {
         tested: false,
         testingMode: 0
     };
+
+    res.status(202).end(JSON.stringify(generalStatus));
 });
 
 //WHEN USER CLICKS ON DOWNLOAD SAMPLE DATASET:
