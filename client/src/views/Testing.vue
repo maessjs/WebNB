@@ -1,36 +1,42 @@
 <template>
   <div class="container">
     <h1>Testing Page</h1>
-
-    <!-- reqests -->
-    <div>
-      <div class="box">
-        <p>runs POST {{url1}}</p>
-        <input id="kInput" type="number" v-model.number="kValue" />
-        <button @click="req1">Run</button>
+    <div v-if="status && status.trainingDataUploaded">
+      <p style="margin-top: -20px;">({{ status.trainingDataFilename }})</p>
+      <!-- reqests -->
+      <div>
+        <div class="box">
+          <p>runs POST {{url1}}</p>
+          <input id="kInput" type="number" v-model.number="kValue" />
+          <button @click="req1">Run</button>
+        </div>
+        <div class="box">
+          <p>runs POST {{url2}}</p>
+          <p>body:</p>
+          <input type="file" name="test-data" @change="onFileSelected">
+          <button @click="req2">Run</button>
+        </div>
       </div>
-      <div class="box">
-        <p>runs POST {{url2}}</p>
-        <p>body:</p>
-        <input type="file" name="test-data" @change="onFileSelected">
-        <button @click="req2">Run</button>
+
+      <!-- results -->
+      <div v-if="result">
+        <h3>Confusion Matrix</h3>
+        <SimpleTable class="simpletable" :content="result.confusion_matrix" />
+        <br>
+        <h3>Detailed Accuracy</h3>
+        <SimpleTable class="simpletable" :content="result.detailed_accuracy" />
+        <br>
+        <h3>Result dataset (classified by WebNB)</h3>
+        <SimpleTable class="simpletable" :content="result.first_15rows_results" />
+        <p>. . .</p>
+        <a href="">Download the whole dataset (as csv)</a>
       </div>
     </div>
-
-    <!-- results -->
-    <div v-if="result">
-      <h3>Confusion Matrix</h3>
-      <SimpleTable class="simpletable" :content="result.confusion_matrix" />
-      <br>
-      <h3>Detailed Accuracy</h3>
-      <SimpleTable class="simpletable" :content="result.detailed_accuracy" />
-      <br>
-      <h3>Result dataset (classified by WebNB)</h3>
-      <SimpleTable class="simpletable" :content="result.first_15rows_results" />
-      <p>. . .</p>
-      <a href="">Download the whole dataset (as csv)</a>
+    <div v-else>
+      <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
     </div>
   </div>
+
 </template>
 
 <script>
@@ -44,6 +50,7 @@
     },
     data() {
       return {
+        status: null,
         url1part: 'http://localhost:3000/api/test-cv?k=',
         kValue: 3,
         url2: 'http://localhost:3000/api/test-up',
@@ -56,7 +63,18 @@
         return this.url1part + this.kValue
       }
     },
+    created() {
+      this.getStatus()
+    },
     methods: {
+      getStatus() {
+        axios.get('http://localhost:3000/api/status')
+          .then(res => {
+            if (res.status == 200) this.status = res.data
+            else console.log('Invalid status response')
+          })
+          .catch(err => console.log(err))
+      },
       req1() {
         axios.post(this.url1)
           .then(res => {

@@ -34,7 +34,7 @@ export default {
           label: 'Upload'
         },
         {
-          route: '/DataStatistics',
+          route: '/TrainingsetStatistics',
           label: 'Statistics'
         },
         {
@@ -42,8 +42,8 @@ export default {
           label: 'Testing'
         },
         {
-          route: '/LoanEvaluator',
-          label: 'Loan Evaluator'
+          route: '/Evaluator',
+          label: 'Evaluator'
         }
       ]
     }
