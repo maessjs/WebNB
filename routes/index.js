@@ -40,13 +40,13 @@ var trainingDataFilename = '';
 var generalStatus = {
     trainingDataUploaded: false,
     trainingDataFilename: null,
+    testingDataFileName: null,
     tested: false,
     testingMode: 0
 };
 
 //HOME PAGE:
 router.get('/', function (req, res, next) {
-    //res.render('index.html', {uploadedMessage: 'Waiting for upload', tableOriginal: "CP3403", tableToShow: "CP3403"});
 });
 
 router.delete('/api/reset', function (req, res, next) {
@@ -61,8 +61,9 @@ router.delete('/api/reset', function (req, res, next) {
 
 //WHEN USER CLICKS ON DOWNLOAD SAMPLE DATASET:
 router.get('/api/download', function (req, res, next) {
-    let file = './downloads/very_small_sample.csv';
-    res.download(file); // Set disposition and send it.
+    let fileNameToDownLoad  = req.query.fileName;
+    let file = './downloads/' + fileNameToDownLoad;
+    res.download(file);
 });
 
 //API FOR FETCHING ENTIRE ORIGINAL UPLOADED DATA:
@@ -115,7 +116,13 @@ router.get('/api/fetch-evidence-for-chart', function (req, res, next) {
     var toFetch = {};
     toFetch = Object.assign({}, getGeneralCount(nummericData, true), getGeneralCount(nonNummericData, false));
 
-    res.end(JSON.stringify(toFetch));
+    //Order as the order of original training dataset:
+    let toReturn = {};
+    (Object.keys(csvBody[0])).forEach((key)=>{
+        toReturn[key] = toFetch[key];
+    });
+
+    res.end(JSON.stringify(toReturn));
 });
 
 //GET THE CONFUSION MATRIX:
@@ -218,6 +225,7 @@ router.post('/api/test-cv', function (req, res, next) {
 
     //UPDATE GENERAL STATUS:
     generalStatus.tested = true;
+    generalStatus.testingDataFileName = generalStatus.trainingDataFilename;
     if (k === 1){
         generalStatus.testingMode = 1;
     } else {
@@ -287,6 +295,7 @@ router.post('/api/test-up', function (req, res, next) {
                     //UPDATE GENERAL STATUS:
                     generalStatus.tested = true;
                     generalStatus.testingMode = 3;
+                    generalStatus.testingDataFileName = file.name;
 
                     res.status(202).end(JSON.stringify(toReturn));
                 })
@@ -345,7 +354,6 @@ router.post('/submit-form', (req, res, next) => {
                 .then((jsonObj) => {
 
                     //THIS IS THE MAIN AND RAW CSV CONTENT THAT NEED TO BE PROCESSED:
-                    //console.log(jsonObj);
                     testSet = JSON.parse(JSON.stringify(jsonObj));
                     csvBody = JSON.parse(JSON.stringify(jsonObj));
 
@@ -529,15 +537,14 @@ const getGeneralCount = function (data, isNumeric) {
     var evidenceAttributeList = {};
     var anEvidenceAttribute = "";
     var value;
-    var classifierOutcomeList;
-    var classCol = "";
+
+    let valuesByClass = {};
 
     var labels = [];
     var values = [];
-    var count = 0;
 
-    classCol = exportClass(Data);
-    classifierOutcomeList = exportClassifierOutcomeList(Data);
+    let classCol = exportClass(Data);
+    let classifierOutcomeList = exportClassifierOutcomeList(Data);
     classifierOutcomeList = [...new Set(classifierOutcomeList)];
 
     console.log("classifierOutcomeList: " + classifierOutcomeList);
@@ -553,6 +560,7 @@ const getGeneralCount = function (data, isNumeric) {
             evidenceAttributeList[anEvidenceAttribute] = "";
 
             value = 0;
+            valuesByClass = {};
             classifierOutcomeList.forEach((aClass) => {
                 value += (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, false));
             });
@@ -563,8 +571,23 @@ const getGeneralCount = function (data, isNumeric) {
         values = Object.values(evidenceAttributeList);
         
         evidenceAttributeList = {};
+
+        //Export the labels and their values:
         evidenceAttributeList['labels'] = labels;
         evidenceAttributeList['values'] = values;
+
+        //Export the statistics by class 'yes' or 'no':
+        classifierOutcomeList.forEach((aClass) => {
+            evidenceAttributeList[aClass] = gatherDataForEvidence(Data,aKey, isNumeric, false);
+            valuesByClass[aClass] = [];
+            (Object.keys(evidenceAttributeList[aClass])).forEach((aKey)=>{
+                valuesByClass[aClass].push(evidenceAttributeList[aClass][aKey][aClass]);
+            });
+            valuesByClass[aClass].pop();
+            evidenceAttributeList[aClass] = valuesByClass[aClass];
+        });
+
+        //Export the table for showing next to be chart:
         evidenceAttributeList['table'] = toArray_twoDim(gatherDataForEvidence(Data,aKey, isNumeric, false));
 
         evidenceList[aKey] = evidenceAttributeList;
@@ -597,11 +620,8 @@ const gatherDataForEvidence = function (data, key, isNumeric, laplace) {
     var value;
     let count = {};
 
-    var classifierOutcomeList;
-    var classCol = "";
-
-    classCol = exportClass(Data);
-    classifierOutcomeList = exportClassifierOutcomeList(Data);
+    let classCol = exportClass(Data);
+    let classifierOutcomeList = exportClassifierOutcomeList(Data);
     classifierOutcomeList = [...new Set(classifierOutcomeList)];
     
     evidenceAttributeList = {};
@@ -638,10 +658,12 @@ const gatherDataForEvidence = function (data, key, isNumeric, laplace) {
             stddev = getStdDeviationIf(Data, key, classCol,aClass);
             min = getMinMaxIf('min',Data, key, classCol,aClass);
             max = getMinMaxIf('max',Data, key, classCol,aClass);
-            evidenceList.min[aClass] = min;
-            evidenceList.max[aClass] = max;
-            evidenceList.mean[aClass] = mean;
-            evidenceList.stddev[aClass] = stddev;
+
+            evidenceList.min[aClass] = parseFloat(min.toFixed(2));
+            evidenceList.max[aClass] = parseFloat(max.toFixed(2));
+            evidenceList.mean[aClass] = parseFloat(mean.toFixed(2));
+            evidenceList.stddev[aClass] = parseFloat(stddev.toFixed(2));
+
             count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
             evidenceList['count'][aClass] = count[aClass];
         })
