@@ -70,6 +70,7 @@
             const statisticsData = {}
 
             for (const attribute in res.data) {
+              console.log('res.data:', JSON.stringify(res.data, null, 2))
               statisticsData[attribute] = {
                 name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1),
                 table: res.data[attribute].table
@@ -88,12 +89,12 @@
                       data: res.data[attribute].values
                     },
                     {
-                      label: "class Yes",
+                      label: "Class Yes",
                       backgroundColor: this.colors[1],
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: res.data[attribute].values
+                      data: res.data[attribute].yes
                     },
                     {
                       label: "Class No",
@@ -101,7 +102,7 @@
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: res.data[attribute].values
+                      data: res.data[attribute].no
                     }
                   ]
                 }
