@@ -1138,14 +1138,11 @@ const exportProbability = function (Data, TestSet, laplace) {
 const hasOriginalClassBefore = function (TestSet, classColName) {
     let data = JSON.parse(JSON.stringify(TestSet));
     let toReturn = null;
-    data.forEach((aDict) => {
-        if (aDict[classColName] === null || aDict[classColName].trim() === "") {
-            toReturn = false;
-        } else {
-            toReturn = true;
-            break;
-        }
-    });
+    if (data[0][classColName] === null || data[0][classColName].trim() === "") {
+        toReturn = false;
+    } else {
+        toReturn = true;
+    }
 };
 
 //Convert Dictionary to arrays:
