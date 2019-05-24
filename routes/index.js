@@ -242,6 +242,7 @@ router.post('/api/test-cv', function (req, res, next) {
 
     correctOrNot['Mean Absolute Error'] = MAE;
     correctOrNot['Mean Squared Error'] = MSE;
+    correctOrNot['Accuracy'] = parseFloat(accuracy.toFixed(2));
 
     console.log('probabilityList is below:');
     console.log(probabilityList);
