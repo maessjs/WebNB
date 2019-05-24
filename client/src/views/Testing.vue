@@ -21,7 +21,7 @@
           <p class="invisible">.</p>
         </div>
         <!-- K-fold -->
-        <div class="request-form">
+        <div class="request-form request-form--center">
           <form @submit.prevent class="pure-form">
             <fieldset>
               <legend>
@@ -70,7 +70,7 @@
         <Table class="Table" :content="result.detailed_accuracy" />
         <br>
         <h3>Result dataset (classified by WebNB)</h3>
-        <Table class="Table" :content="result.first_15rows_results" />
+        <TableG class="Table" :content="result.first_15rows_results" />
         <p>. . .</p>
         <a href="">Download the whole dataset (as csv)</a>
       </div>
@@ -85,11 +85,13 @@
 <script>
   import axios from 'axios'
   import Table from '../components/Table.vue'
+  import TableG from '../components/Table--last-cloumn-grey.vue'
 
   export default {
     name: 'Testing',
     components: {
-      Table
+      Table,
+      TableG
     },
     data() {
       return {
@@ -122,7 +124,7 @@
           })
           .catch(err => console.log('err:', err))
       },
-      req_up() {
+      req_up(e) {
         this.selectedFile = e.target.files[0]
         if (!this.selectedFile) return
 
@@ -158,17 +160,20 @@
     margin: auto;
   }
 
+  .request-block {
+    margin-top: -50px;
+    padding-bottom: 50px;
+  }
+
   .request-form {
     width: 250px;
     display: inline-block;
+    margin-top: 35px;
   }
 
-  .request-block > div {
+  .request-form--center {
     margin-right: 50px;
-  }
-
-  .request-block:last-child {
-    margin-right: 0;
+    margin-left: 50px;
   }
 
   .request-form > form {
