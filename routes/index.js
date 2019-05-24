@@ -222,6 +222,7 @@ router.post('/api/test-cv', function (req, res, next) {
         instance_cursor += amountOfInstances_eachTestSet;
     }
 
+    correctOrNot = {};
     detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
     correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
 
@@ -235,17 +236,15 @@ router.post('/api/test-cv', function (req, res, next) {
         //NOTE: each is already absolute
         MAE += each.probabilityError;
         MSE += Math.pow(each.probabilityError,2);
-        n++;
     });
-    MAE = parseFloat((MAE / probabilityList.length).toFixed(2));
-    MSE = parseFloat(Math.sqrt(MSE / probabilityList.length).toFixed(2));
+    MAE = parseFloat((MAE / probabilityList.length).toFixed(3));
+    console.log('MAE = ' + MAE);
+    MSE = parseFloat(Math.sqrt(MSE / probabilityList.length).toFixed(3));
+    console.log('MSE = ' + MSE);
 
     correctOrNot['Mean Absolute Error'] = MAE;
     correctOrNot['Mean Squared Error'] = MSE;
-    correctOrNot['Accuracy'] = parseFloat(accuracy.toFixed(2));
-
-    console.log('probabilityList is below:');
-    console.log(probabilityList);
+    correctOrNot['Accuracy'] = parseFloat((accuracy*100).toFixed(2)) + "%";
 
     let toReturn = {
         first_15rows_results: null,
@@ -315,10 +314,27 @@ router.post('/api/test-up', function (req, res, next) {
                     classifiedSet_plusOriginalClass = appendOriginalClass(classifiedSet, testSet);
                     probabilityList = exportProbability(csvBody, testSet, laplace);
 
-                    console.log(probabilityList);
-
+                    correctOrNot = {};
                     detailedAccuracy = statistics.getDetailedAccuracyByClass(testSet, classifiedSet);
                     correctOrNot = statistics.calcCorectandIncorrectInstances(testSet, classifiedSet);
+
+                    //adding error estimator here:
+                    accuracy = correctOrNot.Correct / (correctOrNot.Correct + correctOrNot.Incorrect);
+
+                    //calculate the ERROR:
+                    probabilityList.forEach((each)=>{
+                        //NOTE: each is already absolute
+                        MAE += each.probabilityError;
+                        MSE += Math.pow(each.probabilityError,2);
+                    });
+                    MAE = parseFloat((MAE / probabilityList.length).toFixed(3));
+                    console.log('MAE = ' + MAE);
+                    MSE = parseFloat(Math.sqrt(MSE / probabilityList.length).toFixed(3));
+                    console.log('MSE = ' + MSE);
+
+                    correctOrNot['Mean Absolute Error'] = MAE;
+                    correctOrNot['Mean Squared Error'] = MSE;
+                    correctOrNot['Accuracy'] = parseFloat((accuracy*100).toFixed(2)) + "%";
 
                     updateConfusionMatrix(testSet, classifiedSet, exportClass(csvBody), confusionMatrix);
 
@@ -613,10 +629,7 @@ const getKappa =  function(confusionMatrix) {
         accurrateClassified += confusionMatrix[eachKey][eachKey];
         TP;
     });
-
-
-
-}
+};
 
 const getGeneralCount = function (data, isNumeric) {
 
@@ -697,11 +710,9 @@ const getGeneralCount = function (data, isNumeric) {
             classifierOutcomeList.forEach((aClass) => {
                 valuesByClass[aClass] = [];
             });
-            console.log("RawList is " + JSON.stringify(rawList));
+           // console.log("RawList is " + JSON.stringify(rawList));
             for (n=0; n < rawList.length; n++){
                 classifierOutcomeList.forEach((aClass)=>{
-                    console.log("classes[n] en cours = " + classes[n]);
-                    console.log("aClass en cours = " + aClass);
                     if(classes[n] === aClass){
                         valuesByClass[aClass].push(rawList[n]);
                     };
@@ -938,13 +949,13 @@ var getLikelihood = function (Data, Class, ClassifierOutcome, EvidenceAttributeL
         attribute = evidenceKeys[i];
         evidenceAttribute_value = EvidenceAttributeList[attribute];
 
-        if (isNaN(parseInt(evidenceAttribute_value)) === false &&
+        if (isNaN(evidenceAttribute_value) === false &
+            isNaN(parseInt(evidenceAttribute_value)) === false &&
             (typeof parseInt(evidenceAttribute_value) == "number")
         ) {
             mean = getMean(Data, attribute);
             stdDev = getStdDeviation(Data, attribute);
             x = evidenceAttribute_value;
-
             finalLikelihood = (1 / (stdDev * Math.sqrt(2 * Math.PI)) * Math.exp(-Math.abs(Math.pow((x - mean), 2)) / (2 * Math.pow(stdDev, 2))));
         } else {
             numerator = InstanceofFrequency(Data, attribute, evidenceAttribute_value, Class, ClassifierOutcome, laplace);
@@ -1105,6 +1116,7 @@ const exportProbability = function (Data, TestSet, laplace) {
         //Assign new class:
         toReturn[n][classAttr] = theHighestProbability_class;
         //console.log('theHighestProbability_class = ' + theHighestProbability_class);
+        //console.log('theHighestProbability = ' + theHighestProbability);
 
         //Calc the error rate:
         if(originalClass === null || originalClass.trim() === ""){
@@ -1112,10 +1124,10 @@ const exportProbability = function (Data, TestSet, laplace) {
         } else {
             if (originalClass !== theHighestProbability_class){
                 error = theHighestProbability;
-                //console.log("error = " + error);
+                console.log("error = " + error);
             } else {
                 error = 1-theHighestProbability;
-                //console.log("1 - error = " + error);
+                console.log("1 - error = " + error);
             }
         };
 
@@ -1129,7 +1141,8 @@ const exportProbability = function (Data, TestSet, laplace) {
         n++;
     });
 
-    console.log("This is toExport: " + JSON.stringify(toExport));
+    console.log("This is toExport: ");
+    console.log((toExport));
     return toExport;
 };
 

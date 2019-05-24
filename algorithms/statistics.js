@@ -1,18 +1,32 @@
 
 module.exports = {
 
+    /*  exportClass: function (Data) {
+        var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
+        return finalColName;
+    },
+    
+    exportClassifierOutcomeList: function (Data) {
+        var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
+        var classifierOutcomeList = [];
+        Data.forEach((element) => {
+            classifierOutcome = element[finalColName];
+            classifierOutcomeList.push(classifierOutcome);
+        });
+        return classifierOutcomeList;
+    }, */
+
     calcCorectandIncorrectInstances: function (originalData, classifiedData) {
         var toReturn = {
             'Correct': 0,
             'Incorrect': 0
         };
 
-        var originalAttributeList = Object.keys(originalData[0]);
-        var classifiedAttributeList = Object.keys(classifiedData[0]);
+        var finalColName = Object.keys(originalData[0])[Object.keys(originalData[0]).length - 1];
 
         for (var i = 0; i < originalData.length; i++) {
 
-            if (originalData[i]["y"] === classifiedData[i]["y"]) {
+            if (originalData[i][finalColName] === classifiedData[i][finalColName]) {
                 toReturn.Correct++;
             } else {
                 toReturn.Incorrect++;
