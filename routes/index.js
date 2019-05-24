@@ -18,10 +18,12 @@ var csv = require('csvtojson');
 const RESULT_TO_ARRAY = true;
 
 var classifiedSet;
+var classifiedSet_plusOriginalClass;
 var detailedAccuracy;
 
 var accuracy;
-var MEA = 0;
+var kappa= 0;
+var MAE = 0;
 var MSE = 0;
 var SSE = 0;
 
@@ -223,8 +225,23 @@ router.post('/api/test-cv', function (req, res, next) {
     detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
     correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
 
+    classifiedSet_plusOriginalClass = appendOriginalClass(classifiedSet, csvBody);
+
     //adding error estimator here:
-    
+    accuracy = correctOrNot.Correct / (correctOrNot.Correct + correctOrNot.Incorrect);
+
+    //calculate the ERROR:
+    probabilityList.forEach((each)=>{
+        //NOTE: each is already absolute
+        MAE += each.probabilityError;
+        MSE += Math.pow(each.probabilityError,2);
+        n++;
+    });
+    MAE = parseFloat((MAE / probabilityList.length).toFixed(2));
+    MSE = parseFloat(Math.sqrt(MSE / probabilityList.length).toFixed(2));
+
+    correctOrNot['Mean Absolute Error'] = MAE;
+    correctOrNot['Mean Squared Error'] = MSE;
 
     console.log('probabilityList is below:');
     console.log(probabilityList);
@@ -237,12 +254,12 @@ router.post('/api/test-cv', function (req, res, next) {
     };
 
     if (RESULT_TO_ARRAY === true) {
-        toReturn.first_15rows_results = toArray_oneDim(classifiedSet.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
+        toReturn.first_15rows_results = toArray_oneDim(classifiedSet_plusOriginalClass.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
         toReturn.correctness = toArray_oneDim(correctOrNot);
         toReturn.detailed_accuracy = toArray_oneDim(detailedAccuracy);
         toReturn.confusion_matrix = toArray_twoDim(confusionMatrix);
     } else {
-        toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
+        toReturn.first_15rows_results = classifiedSet_plusOriginalClass.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
         toReturn.correctness = correctOrNot;
         toReturn.detailed_accuracy = detailedAccuracy;
         toReturn.confusion_matrix = confusionMatrix;
@@ -294,6 +311,7 @@ router.post('/api/test-up', function (req, res, next) {
                     testSet = JSON.parse(JSON.stringify(jsonObj));
 
                     classifiedSet = classify(csvBody, testSet, laplace);
+                    classifiedSet_plusOriginalClass = appendOriginalClass(classifiedSet, testSet);
                     probabilityList = exportProbability(csvBody, testSet, laplace);
 
                     console.log(probabilityList);
@@ -311,13 +329,13 @@ router.post('/api/test-up', function (req, res, next) {
                     };
 
                     if (RESULT_TO_ARRAY === true) {
-                        toReturn.first_15rows_results = toArray_oneDim(classifiedSet.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
+                        toReturn.first_15rows_results = toArray_oneDim(classifiedSet_plusOriginalClass.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
                         toReturn.correctness = toArray_oneDim(correctOrNot);
                         toReturn.detailed_accuracy = toArray_oneDim(detailedAccuracy);
                         toReturn.confusion_matrix = toArray_twoDim(confusionMatrix);
                     }
                     else {
-                        toReturn.first_15rows_results = classifiedSet.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
+                        toReturn.first_15rows_results = classifiedSet_plusOriginalClass.slice(0, 15); //<-- Getting 15 rows to return to the front-end:
                         toReturn.correctness = correctOrNot;
                         toReturn.detailed_accuracy = detailedAccuracy;
                         toReturn.confusion_matrix = confusionMatrix;
@@ -417,6 +435,33 @@ module.exports = { router: router, csvBody: "OK" };
 //------------------------------------------------------------------------------------------------
 
 //SELECT THE BEST TRAINING DATASET:
+const appendOriginalClass =  function(classifiedSet, trainingSet){
+    let classCol = exportClass(trainingSet);
+    let classWholeList = [];
+    let attrList = Object.keys(trainingSet[0]); //<- This one is not including the CLASS col
+    attrList.pop();
+    trainingSet.forEach((eachDict)=>{
+        classWholeList.push(eachDict[classCol]);
+    });
+    let newStructure = {};
+    let toReturn = [];
+    newStructure['OriginalClass']=null;
+    newStructure['ClassifiedClass']=null;
+    classifiedSet.forEach((eachDict)=>{
+        newStructure = {};
+        attrList.forEach((attr)=>{
+            newStructure[attr] = eachDict[attr];
+        });
+        newStructure['OriginalClass']=null;
+        newStructure['ClassifiedClass']=eachDict[classCol];
+        toReturn.push(newStructure);
+    });
+    for(i=0; i< classifiedSet.length;i++){
+        toReturn[i]['OriginalClass'] = trainingSet[i][classCol];
+    }
+    return toReturn;
+}
+
 const exportBestModelTrainingSet = function (OriginalSet, number_k, laplace) {
 
     let originalSet = JSON.parse(JSON.stringify(OriginalSet));
@@ -558,6 +603,19 @@ const deleteUploaded = function () {
 //------------------------------------------------------------------------------------------------
 
 //The grande collection of naive bayes functions:
+const getKappa =  function(confusionMatrix) {
+    let accurrateClassified = 0;
+
+    let TP, TN, FP, FN;
+
+    (Object.keys(confusionMatrix)).forEach((eachKey)=>{
+        accurrateClassified += confusionMatrix[eachKey][eachKey];
+        TP;
+    });
+
+
+
+}
 
 const getGeneralCount = function (data, isNumeric) {
 

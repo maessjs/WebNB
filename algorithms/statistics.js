@@ -125,7 +125,9 @@ module.exports = {
 
             //Recalculate the rate:
             currentDict['TP_Rate'] = currentDict['TP_Rate'] / (currentDict['TP_Rate'] + currentDict['FN_Rate']);
+            currentDict['TP_Rate'] = Math.round(currentDict['TP_Rate'] * 100) / 100;
             currentDict['FP_Rate'] = currentDict['FP_Rate'] / (currentDict['FP_Rate'] + currentDict['TN_Rate']);
+            currentDict['FP_Rate'] = Math.round(currentDict['FP_Rate'] * 100) / 100;
 
             detailedAccuracyByClass.push(currentDict);
         });
