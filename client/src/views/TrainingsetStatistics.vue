@@ -10,7 +10,7 @@
           <div class="grid-container">
             <BarChart v-if="!attribute.isNumerical" class="grid-item" :datacollection="attribute.chartdata" />
             <BoxPlotChart v-else class="grid-item" :chart-data="attribute.chartdata" />
-            <SimpleTable :content="attribute.table" class="grid-item" />
+            <Table :content="attribute.table" class="grid-item" style="tr:last-child { font-weight: bold; }" />
           </div>
         </div>
       </div>
@@ -26,14 +26,14 @@
 
   import BarChart from '../components/BarChart.vue'
   import BoxPlotChart from '../components/BoxPlotChart.js'
-  import SimpleTable from '../components/SimpleTable.vue'
+  import Table from '../components/Table--last-row-bold.vue'
 
   export default {
     name: 'TrainingsetStatistics',
     components: {
       BarChart,
       BoxPlotChart,
-      SimpleTable
+      Table
     },
     data() {
       return {
@@ -161,4 +161,5 @@
   .typeinfo {
     margin-top: -15px;
   }
+
 </style>

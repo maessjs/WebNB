@@ -22,18 +22,18 @@
       <div v-if="result">
         <div class="box">
           <h3>Confusion Matrix</h3>
-          <SimpleTable class="simpletable" :content="result.confusion_matrix" />
+          <Table class="Table" :content="result.confusion_matrix" />
         </div>
         <div class="box">
           <h3>Correctness</h3>
-          <SimpleTable class="simpletable" :content="result.correctness" />
+          <Table class="Table" :content="result.correctness" />
         </div>
         <br>
         <h3>Detailed Accuracy</h3>
-        <SimpleTable class="simpletable" :content="result.detailed_accuracy" />
+        <Table class="Table" :content="result.detailed_accuracy" />
         <br>
         <h3>Result dataset (classified by WebNB)</h3>
-        <SimpleTable class="simpletable" :content="result.first_15rows_results" />
+        <Table class="Table" :content="result.first_15rows_results" />
         <p>. . .</p>
         <a href="">Download the whole dataset (as csv)</a>
       </div>
@@ -47,12 +47,12 @@
 
 <script>
   import axios from 'axios'
-  import SimpleTable from '../components/SimpleTable.vue'
+  import Table from '../components/Table.vue'
 
   export default {
     name: 'Testing',
     components: {
-      SimpleTable
+      Table
     },
     data() {
       return {
@@ -118,7 +118,7 @@
     max-width: 90%;
   }
 
-  .simpletable {
+  .Table {
     margin: auto;
   }
 
