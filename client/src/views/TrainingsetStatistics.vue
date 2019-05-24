@@ -39,12 +39,7 @@
       return {
         status: null,
         statisticsData: null,
-        colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959'],
-        boxplotMockData: {
-          all: [2, 45, 65, 42, 1, 3, 8, 55, 43, 22, 11, 4, 6, 7, 4, 2, 1, 4, 6],
-          yes: [43, 22, 11, 4, 6, 7, 4, 2, 1, 4, 6],
-          no: [2, 45, 65, 42, 1, 3, 8, 55]
-        }
+        colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959']
       }
     },
     watch: {
@@ -69,24 +64,24 @@
           .then(res => {
             const statisticsData = {}
 
-            for (const attribute in res.data) {
-              console.log('res.data:', JSON.stringify(res.data, null, 2))
-              statisticsData[attribute] = {
-                name: attribute.substring(0, 1).toUpperCase() + attribute.substring(1),
-                table: res.data[attribute].table
+            for (const key in res.data) {
+              // console.log('res.data:', JSON.stringify(res.data, null, 2))
+              statisticsData[key] = {
+                name: key.substring(0, 1).toUpperCase() + key.substring(1),
+                table: res.data[key].table
               }
 
-              if (isNaN(res.data[attribute].labels[0])) {
-                statisticsData[attribute].isNumerical = false
-                statisticsData[attribute].chartdata = {
-                  labels: res.data[attribute].labels,
+              if (res.data[key].labels) {
+                statisticsData[key].isNumerical = false
+                statisticsData[key].chartdata = {
+                  labels: res.data[key].labels,
                   datasets: [{
                       label: "All instances",
                       backgroundColor: this.colors[0],
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: res.data[attribute].values
+                      data: res.data[key].values
                     },
                     {
                       label: "Class Yes",
@@ -94,7 +89,7 @@
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: res.data[attribute].yes
+                      data: res.data[key].yes
                     },
                     {
                       label: "Class No",
@@ -102,13 +97,13 @@
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: res.data[attribute].no
+                      data: res.data[key].no
                     }
                   ]
                 }
               } else {
-                statisticsData[attribute].isNumerical = true
-                statisticsData[attribute].chartdata = {
+                statisticsData[key].isNumerical = true
+                statisticsData[key].chartdata = {
                   labels: ['#'],
                   datasets: [{
                       label: "All instances",
@@ -116,7 +111,7 @@
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: [this.boxplotMockData.all]
+                      data: [res.data[key].values.map(Number)]
                     },
                     {
                       label: "Class Yes",
@@ -124,7 +119,7 @@
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: [this.boxplotMockData.yes]
+                      data: [res.data[key].yes.map(Number)]
                     },
                     {
                       label: "Class No",
@@ -132,7 +127,7 @@
                       pointBackgroundColor: 'white',
                       borderWidth: 1,
                       pointBorderColor: '#249EBF',
-                      data: [this.boxplotMockData.no]
+                      data: [res.data[key].no.map(Number)]
                     }
                   ]
                 }
