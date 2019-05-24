@@ -17,14 +17,19 @@ var formidable = require('formidable');
 var csv = require('csvtojson');
 const RESULT_TO_ARRAY = true;
 
-var csvContent_String;
 var classifiedSet;
 var detailedAccuracy;
-var csvContentJson;
+
+var accuracy;
+var MEA = 0;
+var MSE = 0;
+var SSE = 0;
+
 var csvBody;
 var testSet;
 var csvBodyNumericNormalised;
 var csvBodyNumeric;
+var probabilityList = [];
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
@@ -143,7 +148,7 @@ router.get('/api/status', function (req, res, next) {
 //EXPORT THE PROBABILITY LIST:
 router.get('/api/fetch-probability', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(generalStatus));
+    res.end(JSON.stringify(probabilityList));
 });
 
 //GET THE STATUS
@@ -181,6 +186,7 @@ router.post('/api/test-cv', function (req, res, next) {
     var instance_cursor = 0;
 
     classifiedSet = [];
+    probabilityList = [];
 
     confusionMatrix = buildConfusionMatrix(csvBody);
 
@@ -203,7 +209,11 @@ router.post('/api/test-cv', function (req, res, next) {
         }
 
         if (tempTestSet !== []) {
+            //Classify:
             tempTestSetClassified = classify(tempTrainingSet, tempTestSet, laplace);
+            //Accummulate the Probability:
+            probabilityList = probabilityList.concat(exportProbability(tempTrainingSet, tempTestSet, laplace));
+            //Update confusion matrix:
             updateConfusionMatrix(tempTestSet, tempTestSetClassified, exportClass(csvBody), confusionMatrix);
         }
         classifiedSet = classifiedSet.concat(tempTestSetClassified);
@@ -212,6 +222,12 @@ router.post('/api/test-cv', function (req, res, next) {
 
     detailedAccuracy = statistics.getDetailedAccuracyByClass(csvBody, classifiedSet);
     correctOrNot = statistics.calcCorectandIncorrectInstances(csvBody, classifiedSet);
+
+    //adding error estimator here:
+    
+
+    console.log('probabilityList is below:');
+    console.log(probabilityList);
 
     let toReturn = {
         first_15rows_results: null,
@@ -263,6 +279,8 @@ router.post('/api/test-up', function (req, res, next) {
         let str = __dirname;
         let dir_name = str.substring(0, str.length - 7);
 
+        probabilityList = [];
+
         file.path = dir_name + "/uploads/" + file.name;
         console.log('/api/test-up with csvBody => csvBody.length = ' + csvBody.length);
         console.log('/api/test-up = ' + file.path);
@@ -276,6 +294,9 @@ router.post('/api/test-up', function (req, res, next) {
                     testSet = JSON.parse(JSON.stringify(jsonObj));
 
                     classifiedSet = classify(csvBody, testSet, laplace);
+                    probabilityList = exportProbability(csvBody, testSet, laplace);
+
+                    console.log(probabilityList);
 
                     detailedAccuracy = statistics.getDetailedAccuracyByClass(testSet, classifiedSet);
                     correctOrNot = statistics.calcCorectandIncorrectInstances(testSet, classifiedSet);
@@ -939,7 +960,7 @@ var classify = function (Data, TestSet, laplace) {
                 theHighestProbability_class = each.class_name;
             }
         });
-
+        //Assign new class:
         toReturn[n][classAttr] = theHighestProbability_class;
         n++;
     });
@@ -948,18 +969,16 @@ var classify = function (Data, TestSet, laplace) {
 
 //Classify exporting the probability list:
 //Using the training data set to test:
-var exportProbability = function (Data, TestSet, laplace) {
+const exportProbability = function (Data, TestSet, laplace) {
     var originData = JSON.parse(JSON.stringify(Data));
     var toReturn = JSON.parse(JSON.stringify(TestSet));
 
     let toExport = [];
 
-    var probabilityExport = {
-        instanceNo: null,
-        finalClassified: null,
-        probability: [],
-        probabilityError: null
-    };
+    let error;
+    let originalClass;
+
+    let probabilityList = {};
 
     var attributeList = Object.keys(toReturn[0]);
     var classAttr = attributeList[attributeList.length - 1];
@@ -976,11 +995,19 @@ var exportProbability = function (Data, TestSet, laplace) {
     var theHighestProbability_class = ''; //the class (yes or no) in order to assign to the class.
 
     //Classify each row of data set:
-    var n = 0;
-    var j = 0;
+    let n = 0;
+    let j = 0;
+
     toReturn.forEach((dict) => {
         results = [];
         sum_likelihood = 0;
+
+        probabilityList = {
+            instanceNo: null,
+            originalClass: null,
+            classifiedClass: null,
+            probabilityError: null
+        };
 
         //Get results:
         classList.forEach((aClass) => {
@@ -1013,19 +1040,37 @@ var exportProbability = function (Data, TestSet, laplace) {
             }
         });
 
+        //Reserve the original class:
+        originalClass = toReturn[n][classAttr];
+        //console.log('original class = ' + originalClass);
+        //Assign new class:
         toReturn[n][classAttr] = theHighestProbability_class;
+        //console.log('theHighestProbability_class = ' + theHighestProbability_class);
 
-        probabilityExport.instanceNo = n;
-        probabilityExport.finalClassified = theHighestProbability_class;
-        results.forEach((each) => {
-            probabilityExport.probability.push(normalised_probability);
-            probabilityExport.probability.forEach((each) => {
-                probabilityExport.probabilityError -= each
-            });
-        });
-        toExport.push(probabilityExport);
+        //Calc the error rate:
+        if(originalClass === null || originalClass.trim() === ""){
+            error = 0;
+        } else {
+            if (originalClass !== theHighestProbability_class){
+                error = theHighestProbability;
+                //console.log("error = " + error);
+            } else {
+                error = 1-theHighestProbability;
+                //console.log("1 - error = " + error);
+            }
+        };
+
+        probabilityList.instanceNo = n;
+        probabilityList.classifiedClass = theHighestProbability_class;
+        probabilityList.originalClass = originalClass;
+        probabilityList.probabilityError = error;
+
+        toExport.push(probabilityList);
+
         n++;
     });
+
+    console.log("This is toExport: " + JSON.stringify(toExport));
     return toExport;
 };
 
