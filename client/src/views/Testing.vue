@@ -20,8 +20,14 @@
 
       <!-- results -->
       <div v-if="result">
-        <h3>Confusion Matrix</h3>
-        <SimpleTable class="simpletable" :content="result.confusion_matrix" />
+        <div class="box">
+          <h3>Confusion Matrix</h3>
+          <SimpleTable class="simpletable" :content="result.confusion_matrix" />
+        </div>
+        <div class="box">
+          <h3>Correctness</h3>
+          <SimpleTable class="simpletable" :content="result.correctness" />
+        </div>
         <br>
         <h3>Detailed Accuracy</h3>
         <SimpleTable class="simpletable" :content="result.detailed_accuracy" />
@@ -119,6 +125,7 @@
   .box {
     display: inline-block;
     width: 295px;
+    margin: auto;
   }
 
   #kInput {
