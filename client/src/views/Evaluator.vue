@@ -36,8 +36,11 @@
     <div v-else-if="status && status.trainingDataUploaded">
       <p>Loading...</p>
     </div>
-    <div v-else>
+    <div v-else-if="status">
       <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
+    </div>
+    <div v-else>
+      <p>Loading ...</p>
     </div>
   </div>
 </template>
@@ -52,22 +55,6 @@
       return {
         status: null,
         attributes: null,
-        mock_attributes: [{
-            "name": "variance (float)",
-            "numerical": true,
-            "float": true
-          },
-          {
-            "name": "skewness (nominal)",
-            "numerical": true,
-            "float": false
-          },
-          {
-            "name": "married (for demonstration these are hardcoded attributes, the query of real attributes is however working)",
-            "numerical": false,
-            "options": ['yes', 'no']
-          }
-        ],
         requestData: [],
         errorMessage: null,
         resultClass: null
@@ -89,8 +76,7 @@
       getPossibleAttributes() {
         axios.get('http://localhost:3000/api/fetch-attributes-specs')
           .then(res => {
-            this.attributes = this.mock_attributes
-            // if (res.status == 200) this.attributes = res.data
+            if (res.status == 200) this.attributes = res.data
           })
           .catch(err => console.log(err))
       },

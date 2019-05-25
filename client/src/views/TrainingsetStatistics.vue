@@ -15,8 +15,11 @@
         </div>
       </div>
     </div>
-    <div v-else>
+    <div v-else-if="status">
       <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
+    </div>
+    <div v-else>
+      <p>Loading ...</p>
     </div>
   </div>
 </template>

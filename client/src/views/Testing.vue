@@ -57,26 +57,40 @@
 
       <!-- results -->
       <div v-if="result">
-        <div class="box">
-          <h3>Confusion Matrix</h3>
-          <Table class="Table" :content="result.confusion_matrix" />
+        <!-- Statistics tables only for testing/validation -->
+        <span v-if="hasOriginalClass">
+          <div class="box">
+            <h3>Confusion Matrix</h3>
+            <Table class="Table" :content="result.confusion_matrix" />
+          </div>
+          <div class="box">
+            <h3>Correctness</h3>
+            <Table class="Table" :content="result.correctness" />
+          </div>
+          <br>
+          <h3>Detailed Accuracy</h3>
+          <Table class="Table" :content="result.detailed_accuracy" />
+          <br>
+        </span>
+        <!-- Prominent download button only for originally unclassified data -->
+        <div v-else class="btn-wrapper" style="margin-top: 40px">
+          <a href="http://localhost:3000/api/download-classified">
+            <button @click="download" class="btn btn-download">Download classified data</button>
+          </a>
         </div>
-        <div class="box">
-          <h3>Correctness</h3>
-          <Table class="Table" :content="result.correctness" />
-        </div>
-        <br>
-        <h3>Detailed Accuracy</h3>
-        <Table class="Table" :content="result.detailed_accuracy" />
-        <br>
-        <h3>Result dataset (classified by WebNB)</h3>
-        <TableG class="Table" :content="result.first_15rows_results" />
+        <!-- Table with first 15 rows of result dataset -->
+        <h3>Result dataset</h3>
+        <TableR class="Table" :content="result.first_15rows_results" />
         <p>. . .</p>
-        <a href="">Download the whole dataset (as csv)</a>
+        <a href="http://localhost:3000/api/download-classified" class="download-link">Download the whole dataset (as
+          csv)</a>
       </div>
     </div>
-    <div v-else>
+    <div v-else-if="status">
       <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
+    </div>
+    <div v-else>
+      <p>Loading ...</p>
     </div>
   </div>
 
@@ -85,17 +99,18 @@
 <script>
   import axios from 'axios'
   import Table from '../components/Table.vue'
-  import TableG from '../components/Table--last-cloumn-grey.vue'
+  import TableR from '../components/Table--result.vue'
 
   export default {
     name: 'Testing',
     components: {
       Table,
-      TableG
+      TableR
     },
     data() {
       return {
         status: null,
+        hasOriginalClass: false,
         url1part: 'http://localhost:3000/api/test-cv?k=',
         kValue: 10,
         url2: 'http://localhost:3000/api/test-up',
@@ -176,7 +191,7 @@
     margin-left: 50px;
   }
 
-  .request-form > form {
+  .request-form>form {
     padding-top: 20px;
     height: 60px;
   }
@@ -201,10 +216,10 @@
     font-weight: bold;
   }
 
-  .btn-delete {
-    border: 2px solid rgb(234, 86, 86);
-    color: rgb(234, 86, 86);
-    background-color: rgb(247, 205, 205);
+  .btn-download {
+    border: 2px solid rgb(130, 165, 75);
+    color: rgb(130, 165, 75);
+    background-color: rgb(209, 247, 205);
   }
 
   .btn-wrapper input[type=file] {
@@ -213,5 +228,10 @@
     left: 0;
     top: 0;
     opacity: 0;
+  }
+
+  .download-link {
+    color: black;
+    text-decoration: underline;
   }
 </style>

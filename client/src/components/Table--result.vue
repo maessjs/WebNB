@@ -15,7 +15,7 @@
 
 <script>
   export default {
-    name: 'Table--last-cloumn-grey',
+    name: 'Table--result',
     props: {
       content: Array
     },
@@ -31,7 +31,17 @@
 </script>
 
 <style scoped>
+
   tr > td:last-of-type {
-    background-color: #f1f1f1;
+    font-weight: bold;
+    background-color: #4f9da6b7;
   }
+
+  tr > td:nth-last-of-type(2) {
+    font-weight: bold;
+    background-color: #facf5ab7;
+  }
+
 </style>
+
+colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959']
