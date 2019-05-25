@@ -144,6 +144,7 @@ router.get('/api/fetch-attributes-specs', function (req, res, next) {
 
     let toFetch = [];
     toFetch =  toFetch.concat(exportAttributeSpecs(nummericData, true));
+    toFetch.pop(); //<-- remove the last 
     toFetch =  toFetch.concat(exportAttributeSpecs(nonNummericData, false));
 
     //Order as the order of original training dataset:
@@ -610,19 +611,27 @@ const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribu
 const exportAttributeSpecs = function (Data, isNumeric) {
     let eachSpec = {};
     let toReturn = [];
+    let floatList = [];
     let classifierOutcomeList = [];
     let colNames = Object.keys(Data[0]);
     colNames.forEach((finalColName) => {
         eachSpec = {};
+        floatList = [];
         classifierOutcomeList = [];
         eachSpec['name'] = finalColName;
         Data.forEach((element) => {
             classifierOutcome = element[finalColName];
             classifierOutcomeList.push(classifierOutcome);
             classifierOutcomeList = [...new Set(classifierOutcomeList)];
+            floatList.push(isFloatorInt(classifierOutcome));
         });
         if (isNumeric === true) {
             eachSpec['numerical'] = true;
+            if (checkTypeInArray(floatList)==='float'){
+                eachSpec['float'] = true;
+            } else {
+                eachSpec['float'] = false;
+            }
         } else {
             eachSpec['numerical'] = false;
             eachSpec['options'] = classifierOutcomeList;
@@ -632,6 +641,46 @@ const exportAttributeSpecs = function (Data, isNumeric) {
     //console.log('exportAttributeSpecs:');
     //console.log(toReturn);
     return toReturn;
+}
+
+const checkTypeInArray = function(typeList){
+    checkType = '';
+    typeList.forEach((aType)=>{
+        if (aType === "string"){
+            return 'string';
+        } else {
+            if (aType === "integer"){
+                checkType = 'integer';
+            } else if (aType === "float") {
+                checkType = 'float';
+                return 'float';
+            }
+        }
+    });
+    return checkType;
+}
+
+const isFloatorInt = function(val){
+    theNum = 0;
+    if(isNaN(val) === true){
+        return "string"
+    } else { //<-- if it IS A NUMBER:
+        theNum = Number(val);
+        if (Number.isInteger(theNum) === true){
+            return "integer";
+        } else {
+            if (isFloat(theNum) === true){
+                return "float";
+            } else {
+                return 'unknown';
+            }
+        }
+        
+    }
+}
+
+function isFloat(n){
+    return Number(n) === n && n % 1 !== 0;
 }
 
 const buildConfusionMatrix = function (Data) {
