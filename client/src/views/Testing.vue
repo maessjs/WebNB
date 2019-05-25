@@ -3,18 +3,55 @@
     <h1>Testing Page</h1>
     <div v-if="status && status.trainingDataUploaded">
       <p style="margin-top: -20px;">({{ status.trainingDataFilename }})</p>
-      <!-- reqests -->
-      <div>
-        <div class="box">
-          <p>runs POST {{url1}}</p>
-          <input id="kInput" type="number" v-model.number="kValue" />
-          <button @click="req1">Run</button>
+      <!-- Run tests -->
+      <div class="request-block">
+        <!-- Whole dataset -->
+        <div class="request-form">
+          <form @submit.prevent class="pure-form">
+            <fieldset>
+              <legend>
+                Use the training set
+                <br>
+                for testing
+              </legend>
+              <button @click="req_cv(1)" type="submit" class="pure-button pure-button-primary"
+                style="width: 60px">Run</button>
+            </fieldset>
+          </form>
+          <p class="invisible">.</p>
         </div>
-        <div class="box">
-          <p>runs POST {{url2}}</p>
-          <p>body:</p>
-          <input type="file" name="test-data" @change="onFileSelected">
-          <button @click="req2">Run</button>
+        <!-- K-fold -->
+        <div class="request-form request-form--center">
+          <form @submit.prevent class="pure-form">
+            <fieldset>
+              <legend>
+                Choose number of folds
+                <br>
+                for Cross-validation
+              </legend>
+              <input v-model.number="kValue" type="number" style="width: 60px; margin-right: 5px" placeholder="k">
+              <button @click="req_cv(kValue)" type="submit" class="pure-button pure-button-primary"
+                style="width: 60px">Run</button>
+            </fieldset>
+          </form>
+          <p class="invisible">.</p>
+        </div>
+        <!-- Upload testset -->
+        <div class="request-form">
+          <form @submit.prevent class="pure-form">
+            <fieldset>
+              <legend>
+                Supply data for testing,
+                <br>
+                validation and classification
+              </legend>
+              <div class="btn-wrapper">
+                <button class="btn">Upload a file</button>
+                <input type="file" name="training_data" @change="req_up" />
+              </div>
+            </fieldset>
+          </form>
+          <p class="invisible">.</p>
         </div>
       </div>
 
@@ -33,7 +70,7 @@
         <Table class="Table" :content="result.detailed_accuracy" />
         <br>
         <h3>Result dataset (classified by WebNB)</h3>
-        <Table class="Table" :content="result.first_15rows_results" />
+        <TableG class="Table" :content="result.first_15rows_results" />
         <p>. . .</p>
         <a href="">Download the whole dataset (as csv)</a>
       </div>
@@ -48,25 +85,22 @@
 <script>
   import axios from 'axios'
   import Table from '../components/Table.vue'
+  import TableG from '../components/Table--last-cloumn-grey.vue'
 
   export default {
     name: 'Testing',
     components: {
-      Table
+      Table,
+      TableG
     },
     data() {
       return {
         status: null,
         url1part: 'http://localhost:3000/api/test-cv?k=',
-        kValue: 3,
+        kValue: 10,
         url2: 'http://localhost:3000/api/test-up',
         selectedFile: null,
         result: null
-      }
-    },
-    computed: {
-      url1: function () {
-        return this.url1part + this.kValue
       }
     },
     created() {
@@ -81,8 +115,8 @@
           })
           .catch(err => console.log(err))
       },
-      req1() {
-        axios.post(this.url1)
+      req_cv(k) {
+        axios.post(this.url1part + k)
           .then(res => {
             if (res.status === 200) {
               this.result = res.data
@@ -90,10 +124,8 @@
           })
           .catch(err => console.log('err:', err))
       },
-      onFileSelected(e) {
+      req_up(e) {
         this.selectedFile = e.target.files[0]
-      },
-      req2() {
         if (!this.selectedFile) return
 
         const fd = new FormData()
@@ -128,7 +160,58 @@
     margin: auto;
   }
 
-  #kInput {
-    width: 100px;
+  .request-block {
+    margin-top: -50px;
+    padding-bottom: 50px;
+  }
+
+  .request-form {
+    width: 250px;
+    display: inline-block;
+    margin-top: 35px;
+  }
+
+  .request-form--center {
+    margin-right: 50px;
+    margin-left: 50px;
+  }
+
+  .request-form > form {
+    padding-top: 20px;
+    height: 60px;
+  }
+
+  .invisible {
+    font-size: 0%;
+  }
+
+  .btn-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+  }
+
+  .btn {
+    border: 2px solid gray;
+    color: gray;
+    background-color: white;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .btn-delete {
+    border: 2px solid rgb(234, 86, 86);
+    color: rgb(234, 86, 86);
+    background-color: rgb(247, 205, 205);
+  }
+
+  .btn-wrapper input[type=file] {
+    font-size: 100px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
   }
 </style>
