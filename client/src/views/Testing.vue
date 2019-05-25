@@ -58,7 +58,7 @@
       <!-- results -->
       <div v-if="result">
         <!-- Statistics tables only for testing/validation -->
-        <span v-if="hasOriginalClass">
+        <span v-if="status.hasOriginalClass">
           <div class="box">
             <h3>Confusion Matrix</h3>
             <Table class="Table" :content="result.confusion_matrix" />
@@ -75,7 +75,7 @@
         <!-- Prominent download button only for originally unclassified data -->
         <div v-else class="btn-wrapper" style="margin-top: 40px">
           <a href="http://localhost:3000/api/download-classified">
-            <button @click="download" class="btn btn-download">Download classified data</button>
+            <button class="btn btn-download">Download classified data</button>
           </a>
         </div>
         <!-- Table with first 15 rows of result dataset -->
@@ -110,7 +110,6 @@
     data() {
       return {
         status: null,
-        hasOriginalClass: false,
         url1part: 'http://localhost:3000/api/test-cv?k=',
         kValue: 10,
         url2: 'http://localhost:3000/api/test-up',
@@ -135,6 +134,7 @@
           .then(res => {
             if (res.status === 200) {
               this.result = res.data
+              if (res.data.status) this.status = res.data.status
             }
           })
           .catch(err => console.log('err:', err))
@@ -150,6 +150,7 @@
           .then(res => {
             if (res.status === 202) {
               this.result = res.data
+              if (res.data.status) this.status = res.data.status
             }
           })
           .catch(err => console.log(err))
