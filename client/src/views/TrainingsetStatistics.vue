@@ -39,11 +39,11 @@
       return {
         status: null,
         statisticsData: null,
-        colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959']
+        colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959']
       }
     },
     watch: {
-      status: function() {
+      status: function () {
         if (this.status && this.status.trainingDataUploaded) this.fetchChartData()
       }
     },
@@ -65,7 +65,6 @@
             const statisticsData = {}
 
             for (const key in res.data) {
-              // console.log('res.data:', JSON.stringify(res.data, null, 2))
               statisticsData[key] = {
                 name: key.substring(0, 1).toUpperCase() + key.substring(1),
                 table: res.data[key].table
@@ -75,67 +74,45 @@
                 statisticsData[key].isNumerical = false
                 statisticsData[key].chartdata = {
                   labels: res.data[key].labels,
-                  datasets: [{
-                      label: "All instances",
-                      backgroundColor: this.colors[0],
-                      pointBackgroundColor: 'white',
-                      borderWidth: 1,
-                      pointBorderColor: '#249EBF',
-                      data: res.data[key].values
-                    },
-                    {
-                      label: "Class Yes",
-                      backgroundColor: this.colors[1],
-                      pointBackgroundColor: 'white',
-                      borderWidth: 1,
-                      pointBorderColor: '#249EBF',
-                      data: res.data[key].yes
-                    },
-                    {
-                      label: "Class No",
-                      backgroundColor: this.colors[2],
-                      pointBackgroundColor: 'white',
-                      borderWidth: 1,
-                      pointBorderColor: '#249EBF',
-                      data: res.data[key].no
-                    }
-                  ]
+                  datasets: []
                 }
+                res.data[key].classes.forEach((c, index) => {
+                  console.log('c:', JSON.stringify(c, null, 2))
+                  statisticsData[key].chartdata.datasets.push({
+                    label: this.nameToLabel(c.name),
+                    backgroundColor: this.colors[index],
+                    pointBackgroundColor: 'white',
+                    borderWidth: 1,
+                    pointBorderColor: '#249EBF',
+                    data: c.values
+                  })
+                });
               } else {
                 statisticsData[key].isNumerical = true
                 statisticsData[key].chartdata = {
                   labels: ['#'],
-                  datasets: [{
-                      label: "All instances",
-                      backgroundColor: this.colors[0],
-                      pointBackgroundColor: 'white',
-                      borderWidth: 1,
-                      pointBorderColor: '#249EBF',
-                      data: [res.data[key].values.map(Number)]
-                    },
-                    {
-                      label: "Class Yes",
-                      backgroundColor: this.colors[1],
-                      pointBackgroundColor: 'white',
-                      borderWidth: 1,
-                      pointBorderColor: '#249EBF',
-                      data: [res.data[key].yes.map(Number)]
-                    },
-                    {
-                      label: "Class No",
-                      backgroundColor: this.colors[2],
-                      pointBackgroundColor: 'white',
-                      borderWidth: 1,
-                      pointBorderColor: '#249EBF',
-                      data: [res.data[key].no.map(Number)]
-                    }
-                  ]
+                  datasets: []
                 }
+                res.data[key].classes.forEach((c, index) => {
+                  console.log('c:', JSON.stringify(c, null, 2))
+                  statisticsData[key].chartdata.datasets.push({
+                    label: this.nameToLabel(c.name),
+                    backgroundColor: this.colors[index],
+                    pointBackgroundColor: 'white',
+                    borderWidth: 1,
+                    pointBorderColor: '#249EBF',
+                    data: [c.values.map(Number)]
+                  })
+                });
               }
             }
             this.statisticsData = statisticsData
           })
           .catch(err => console.log('err:', err))
+      },
+      nameToLabel(name) {
+        if (name == 'All') return 'All instances'
+        else return 'Class ' + name
       }
     }
   }
@@ -161,5 +138,4 @@
   .typeinfo {
     margin-top: -15px;
   }
-
 </style>
