@@ -277,7 +277,18 @@ router.post('/api/test-cv', function (req, res, next) {
         correctness: null,
         detailed_accuracy: null,
         confusion_matrix: null,
+        status: null,
     };
+
+    //UPDATE GENERAL STATUS:
+    generalStatus.tested = true;
+    generalStatus.testingDataFileName = generalStatus.trainingDataFilename;
+    generalStatus.hasOriginalClass = true;
+    if (k === 1) {
+        generalStatus.testingMode = 1;
+    } else {
+        generalStatus.testingMode = 2;
+    }
 
     if (RESULT_TO_ARRAY === true) {
         toReturn.first_15rows_results = toArray_oneDim(classifiedSet_plusOriginalClass.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
@@ -290,16 +301,7 @@ router.post('/api/test-cv', function (req, res, next) {
         toReturn.detailed_accuracy = detailedAccuracy;
         toReturn.confusion_matrix = confusionMatrix;
     }
-
-    //UPDATE GENERAL STATUS:
-    generalStatus.tested = true;
-    generalStatus.testingDataFileName = generalStatus.trainingDataFilename;
-    generalStatus.hasOriginalClass = true;
-    if (k === 1) {
-        generalStatus.testingMode = 1;
-    } else {
-        generalStatus.testingMode = 2;
-    }
+    toReturn.status = generalStatus;
 
     res.end(JSON.stringify(toReturn));
 });
@@ -369,7 +371,14 @@ router.post('/api/test-up', function (req, res, next) {
                         correctness: null,
                         detailed_accuracy: null,
                         confusion_matrix: null,
+                        status: null
                     };
+
+                    //UPDATE GENERAL STATUS:
+                    generalStatus.tested = true;
+                    generalStatus.testingMode = 3;
+                    generalStatus.testingDataFileName = file.name;
+                    generalStatus.hasOriginalClass = hasOriginalClassBefore(testSet, exportClass(csvBody));
 
                     if (RESULT_TO_ARRAY === true) {
                         toReturn.first_15rows_results = toArray_oneDim(classifiedSet_plusOriginalClass.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
@@ -383,12 +392,7 @@ router.post('/api/test-up', function (req, res, next) {
                         toReturn.detailed_accuracy = detailedAccuracy;
                         toReturn.confusion_matrix = confusionMatrix;
                     }
-
-                    //UPDATE GENERAL STATUS:
-                    generalStatus.tested = true;
-                    generalStatus.testingMode = 3;
-                    generalStatus.testingDataFileName = file.name;
-                    generalStatus.hasOriginalClass = hasOriginalClassBefore(testSet, exportClass(csvBody));
+                    toReturn.status = generalStatus;
 
                     res.status(202).end(JSON.stringify(toReturn));
                 })
