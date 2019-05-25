@@ -41,34 +41,18 @@ module.exports = {
     getDetailedAccuracyByClass: function (originalData, classifiedData) {
         var detailedAccuracyByClass = [];
 
-        var TP_Rate = 0;
-        var FP_Rate = 0;
-        var Precision = 0;
-        var Recall = 0;
-        var Sensitivity = 0;
-        var Specificity = 0;
-
-        //Make again a classlist:
-        var toReturn = {
-            'Correct': 0,
-            'Incorrect': 0
-        };
-
         var originalAttributeList = Object.keys(originalData[0]);
         var classifiedAttributeList = Object.keys(classifiedData[0]);
 
         var originClassAttr = originalAttributeList[originalAttributeList.length - 1]; //y
-        console.log('originClassAttr = ' + originClassAttr);
 
         var classifiedClassAttr = classifiedAttributeList[classifiedAttributeList.length - 1]; //y
-        console.log('classifiedClassAttr = ' + classifiedClassAttr);
 
         var classList = [];
         originalData.forEach((dict) => {
             classList.push(dict[classifiedClassAttr])
         });
         classList = [...new Set(classList)];
-        console.log("statistics: classList: " + classList);
 
         var currentDict;
 
@@ -142,6 +126,9 @@ module.exports = {
             currentDict['TP_Rate'] = Math.round(currentDict['TP_Rate'] * 100) / 100;
             currentDict['FP_Rate'] = currentDict['FP_Rate'] / (currentDict['FP_Rate'] + currentDict['TN_Rate']);
             currentDict['FP_Rate'] = Math.round(currentDict['FP_Rate'] * 100) / 100;
+
+            delete currentDict['TN_Rate'];
+            delete currentDict['FN_Rate'];
 
             detailedAccuracyByClass.push(currentDict);
         });

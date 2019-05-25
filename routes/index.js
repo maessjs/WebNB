@@ -1,4 +1,6 @@
-var discretization = require('../algorithms/discretisation.js');
+var ProgressBar = require('progress');
+var bar;
+
 const converter = require('json-2-csv');
 var statistics = require('../algorithms/statistics.js');
 var getNumeric = require('../algorithms/get_only_numeric_cols.js');
@@ -80,7 +82,6 @@ router.get('/api/download', function (req, res, next) {
 router.get('/api/fetch-data', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(csvBody));
-    console.log(csvBody);
 });
 
 
@@ -118,20 +119,22 @@ router.get('/api/fetch-accuracy', function (req, res, next) {
 
 //GET DATA FOR CHART:
 router.get('/api/fetch-evidence-for-chart', function (req, res, next) {
+    bar = new ProgressBar(':bar', { total: 5 });
     res.setHeader('Content-Type', 'application/json');
-
+    bar.tick();
     let nummericData = getNumeric.getNumericAttributes(csvBody);
     let nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
-
+    bar.tick();
     let toFetch = {};
     toFetch = Object.assign({}, getGeneralCount(nummericData, true), getGeneralCount(nonNummericData, false));
-
+    bar.tick();
     //Order as the order of original training dataset:
     let toReturn = {};
+    bar.tick();
     (Object.keys(csvBody[0])).forEach((key) => {
         toReturn[key] = toFetch[key];
     });
-
+    bar.tick();
     res.end(JSON.stringify(toReturn));
 });
 
@@ -223,6 +226,8 @@ router.post('/api/test-cv', function (req, res, next) {
     let tempTrainingSet = JSON.parse(JSON.stringify(csvBody));
     let tempTestSetClassified;
 
+    bar = new ProgressBar(':bar', { total: csvBody.length });
+
     while (instance_cursor < csvBody.length) {
 
         //Restore the tempTrainingSet to full csvBody:
@@ -265,9 +270,7 @@ router.post('/api/test-cv', function (req, res, next) {
         MSE += Math.pow(each.probabilityError, 2);
     });
     MAE = parseFloat((MAE / probabilityList.length).toFixed(3));
-    console.log('MAE = ' + MAE);
     MSE = parseFloat(Math.sqrt(MSE / probabilityList.length).toFixed(3));
-    console.log('MSE = ' + MSE);
 
     correctOrNot['Mean Absolute Error'] = MAE;
     correctOrNot['Mean Squared Error'] = MSE;
@@ -314,7 +317,6 @@ router.post('/api/test-up', function (req, res, next) {
 
     let file = req.files;
     let hasOriginalClass;
-    console.log('fileName = ' + file);
 
     let form = new formidable.IncomingForm();
     let promise;
@@ -330,8 +332,6 @@ router.post('/api/test-up', function (req, res, next) {
         probabilityList = [];
 
         file.path = dir_name + "/uploads/" + file.name;
-        console.log('/api/test-up with csvBody => csvBody.length = ' + csvBody.length);
-        console.log('/api/test-up = ' + file.path);
 
         setTimeout(() => {
             csv()
@@ -361,9 +361,7 @@ router.post('/api/test-up', function (req, res, next) {
                         MSE += Math.pow(each.probabilityError, 2);
                     });
                     MAE = parseFloat((MAE / probabilityList.length).toFixed(3));
-                    console.log('MAE = ' + MAE);
                     MSE = parseFloat(Math.sqrt(MSE / probabilityList.length).toFixed(3));
-                    console.log('MSE = ' + MSE);
 
                     correctOrNot['Mean Absolute Error'] = MAE;
                     correctOrNot['Mean Squared Error'] = MSE;
@@ -404,7 +402,6 @@ router.post('/api/test-up', function (req, res, next) {
                         toReturn.confusion_matrix = confusionMatrix;
                     }
                     toReturn.status = generalStatus;
-                    console.log('toReturn.status =' + JSON.stringify(generalStatus));
 
                     res.status(202).end(JSON.stringify(toReturn));
                 })
@@ -439,7 +436,6 @@ router.post('/api/evaluate', function (req, res, next) {
 
     classifiedSet = classify(csvBody, testSet, laplace);
     let toReturn = classifiedSet[0][exportClass(csvBody)];
-    console.log(classifiedSet);
 
     res.status(202).end((toReturn));
 });
@@ -682,8 +678,6 @@ const exportAttributeSpecs = function (Data, isNumeric) {
         }
         toReturn.push(eachSpec);
     });
-    //console.log('exportAttributeSpecs:');
-    //console.log(toReturn);
     return toReturn;
 }
 
@@ -872,7 +866,6 @@ const getGeneralCount = function (data, isNumeric) {
             classifierOutcomeList.forEach((aClass) => {
                 valuesByClass[aClass] = [];
             });
-            // console.log("RawList is " + JSON.stringify(rawList));
             for (n = 0; n < rawList.length; n++) {
                 classifierOutcomeList.forEach((aClass) => {
                     if (rawClassList[n] === aClass) {
@@ -1199,6 +1192,7 @@ var classify = function (Data, TestSet, laplace) {
         });
         //Assign new class:
         toReturn[n][classAttr] = theHighestProbability_class;
+        bar.tick();
         n++;
     });
     return toReturn;
@@ -1279,11 +1273,8 @@ const exportProbability = function (Data, TestSet, laplace) {
 
         //Reserve the original class:
         originalClass = toReturn[n][classAttr];
-        //console.log('original class = ' + originalClass);
         //Assign new class:
         toReturn[n][classAttr] = theHighestProbability_class;
-        //console.log('theHighestProbability_class = ' + theHighestProbability_class);
-        //console.log('theHighestProbability = ' + theHighestProbability);
 
         //Calc the error rate:
         if (originalClass === null || originalClass.trim() === "") {
@@ -1291,10 +1282,8 @@ const exportProbability = function (Data, TestSet, laplace) {
         } else {
             if (originalClass !== theHighestProbability_class) {
                 error = theHighestProbability;
-                console.log("error = " + error);
             } else {
                 error = 1 - theHighestProbability;
-                console.log("1 - error = " + error);
             }
         };
 
@@ -1307,9 +1296,6 @@ const exportProbability = function (Data, TestSet, laplace) {
 
         n++;
     });
-
-    console.log("This is toExport: ");
-    console.log((toExport));
     return toExport;
 };
 
