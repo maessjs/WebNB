@@ -22,7 +22,7 @@ var classifiedSet_plusOriginalClass;
 var detailedAccuracy;
 
 var accuracy;
-var kappa= 0;
+var kappa = 0;
 var MAE = 0;
 var MSE = 0;
 var SSE = 0;
@@ -120,16 +120,41 @@ router.get('/api/fetch-accuracy', function (req, res, next) {
 router.get('/api/fetch-evidence-for-chart', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
 
-    var nummericData = getNumeric.getNumericAttributes(csvBody);
-    var nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
+    let nummericData = getNumeric.getNumericAttributes(csvBody);
+    let nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
 
-    var toFetch = {};
+    let toFetch = {};
     toFetch = Object.assign({}, getGeneralCount(nummericData, true), getGeneralCount(nonNummericData, false));
 
     //Order as the order of original training dataset:
     let toReturn = {};
     (Object.keys(csvBody[0])).forEach((key) => {
         toReturn[key] = toFetch[key];
+    });
+
+    res.end(JSON.stringify(toReturn));
+});
+
+//GET ATTRIBUTE SPECS:
+router.get('/api/fetch-attributes-specs', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+
+    let nummericData = getNumeric.getNumericAttributes(csvBody);
+    let nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
+
+    let toFetch = [];
+    toFetch =  toFetch.concat(exportAttributeSpecs(nummericData, true));
+    toFetch =  toFetch.concat(exportAttributeSpecs(nonNummericData, false));
+
+    //Order as the order of original training dataset:
+    let toReturn = [];
+    let orderedKeyList = (Object.keys(csvBody[0]));
+    orderedKeyList.forEach((key) => {
+        toFetch.forEach((eachDict)=>{
+            if(eachDict['name']===key){
+                toReturn.push(eachDict);
+            }
+        });
     });
 
     res.end(JSON.stringify(toReturn));
@@ -232,10 +257,10 @@ router.post('/api/test-cv', function (req, res, next) {
     accuracy = correctOrNot.Correct / (correctOrNot.Correct + correctOrNot.Incorrect);
 
     //calculate the ERROR:
-    probabilityList.forEach((each)=>{
+    probabilityList.forEach((each) => {
         //NOTE: each is already absolute
         MAE += each.probabilityError;
-        MSE += Math.pow(each.probabilityError,2);
+        MSE += Math.pow(each.probabilityError, 2);
     });
     MAE = parseFloat((MAE / probabilityList.length).toFixed(3));
     console.log('MAE = ' + MAE);
@@ -244,7 +269,7 @@ router.post('/api/test-cv', function (req, res, next) {
 
     correctOrNot['Mean Absolute Error'] = MAE;
     correctOrNot['Mean Squared Error'] = MSE;
-    correctOrNot['Accuracy'] = parseFloat((accuracy*100).toFixed(2)) + "%";
+    correctOrNot['Accuracy'] = parseFloat((accuracy * 100).toFixed(2)) + "%";
 
     let toReturn = {
         first_15rows_results: null,
@@ -322,10 +347,10 @@ router.post('/api/test-up', function (req, res, next) {
                     accuracy = correctOrNot.Correct / (correctOrNot.Correct + correctOrNot.Incorrect);
 
                     //calculate the ERROR:
-                    probabilityList.forEach((each)=>{
+                    probabilityList.forEach((each) => {
                         //NOTE: each is already absolute
                         MAE += each.probabilityError;
-                        MSE += Math.pow(each.probabilityError,2);
+                        MSE += Math.pow(each.probabilityError, 2);
                     });
                     MAE = parseFloat((MAE / probabilityList.length).toFixed(3));
                     console.log('MAE = ' + MAE);
@@ -334,7 +359,7 @@ router.post('/api/test-up', function (req, res, next) {
 
                     correctOrNot['Mean Absolute Error'] = MAE;
                     correctOrNot['Mean Squared Error'] = MSE;
-                    correctOrNot['Accuracy'] = parseFloat((accuracy*100).toFixed(2)) + "%";
+                    correctOrNot['Accuracy'] = parseFloat((accuracy * 100).toFixed(2)) + "%";
 
                     updateConfusionMatrix(testSet, classifiedSet, exportClass(csvBody), confusionMatrix);
 
@@ -452,28 +477,28 @@ module.exports = { router: router, csvBody: "OK" };
 //------------------------------------------------------------------------------------------------
 
 //SELECT THE BEST TRAINING DATASET:
-const appendOriginalClass =  function(classifiedSet, trainingSet){
+const appendOriginalClass = function (classifiedSet, trainingSet) {
     let classCol = exportClass(trainingSet);
     let classWholeList = [];
     let attrList = Object.keys(trainingSet[0]); //<- This one is not including the CLASS col
     attrList.pop();
-    trainingSet.forEach((eachDict)=>{
+    trainingSet.forEach((eachDict) => {
         classWholeList.push(eachDict[classCol]);
     });
     let newStructure = {};
     let toReturn = [];
-    newStructure['OriginalClass']=null;
-    newStructure['ClassifiedClass']=null;
-    classifiedSet.forEach((eachDict)=>{
+    newStructure['OriginalClass'] = null;
+    newStructure['ClassifiedClass'] = null;
+    classifiedSet.forEach((eachDict) => {
         newStructure = {};
-        attrList.forEach((attr)=>{
+        attrList.forEach((attr) => {
             newStructure[attr] = eachDict[attr];
         });
-        newStructure['OriginalClass']=null;
-        newStructure['ClassifiedClass']=eachDict[classCol];
+        newStructure['OriginalClass'] = null;
+        newStructure['ClassifiedClass'] = eachDict[classCol];
         toReturn.push(newStructure);
     });
-    for(i=0; i< classifiedSet.length;i++){
+    for (i = 0; i < classifiedSet.length; i++) {
         toReturn[i]['OriginalClass'] = trainingSet[i][classCol];
     }
     return toReturn;
@@ -582,6 +607,33 @@ const updateConfusionMatrix = function (OriginalSet, ClassifiedSet, classAttribu
 //------------------------------------------------------------------------------------------------
 
 //Function build confusion matrix:
+const exportAttributeSpecs = function (Data, isNumeric) {
+    let eachSpec = {};
+    let toReturn = [];
+    let classifierOutcomeList = [];
+    let colNames = Object.keys(Data[0]);
+    colNames.forEach((finalColName) => {
+        eachSpec = {};
+        classifierOutcomeList = [];
+        eachSpec['name'] = finalColName;
+        Data.forEach((element) => {
+            classifierOutcome = element[finalColName];
+            classifierOutcomeList.push(classifierOutcome);
+            classifierOutcomeList = [...new Set(classifierOutcomeList)];
+        });
+        if (isNumeric === true) {
+            eachSpec['numerical'] = true;
+        } else {
+            eachSpec['numerical'] = false;
+            eachSpec['options'] = classifierOutcomeList;
+        }
+        toReturn.push(eachSpec);
+    });
+    //console.log('exportAttributeSpecs:');
+    //console.log(toReturn);
+    return toReturn;
+}
+
 const buildConfusionMatrix = function (Data) {
     let data = JSON.parse(JSON.stringify(Data));
     let classCol = exportClass(data);
@@ -620,12 +672,13 @@ const deleteUploaded = function () {
 //------------------------------------------------------------------------------------------------
 
 //The grande collection of naive bayes functions:
-const getKappa =  function(confusionMatrix) {
+const getKappa = function (confusionMatrix) {
     let accurrateClassified = 0;
 
     let TP, TN, FP, FN;
+    let classes = [];
 
-    (Object.keys(confusionMatrix)).forEach((eachKey)=>{
+    (Object.keys(confusionMatrix)).forEach((eachKey) => {
         accurrateClassified += confusionMatrix[eachKey][eachKey];
         TP;
     });
@@ -645,16 +698,19 @@ const getGeneralCount = function (data, isNumeric) {
     let valuesByClass = {};
     let rawList = [];
 
-    var labels = [];
-    var values = [];
+    let labels = [];
+    let values = [];
+    let rawClassList = [];
     let classes = [];
+    let eachClass = {};
+    let tempEvidenceAttributeList = {};
 
     let classCol = exportClass(Data);
     let classifierOutcomeList = exportClassifierOutcomeList(Data);
     classifierOutcomeList = [...new Set(classifierOutcomeList)];
 
-    Data.forEach((aDict)=>{
-        classes.push(aDict[classCol]);
+    Data.forEach((aDict) => {
+        rawClassList.push(aDict[classCol]);
     });
 
     if (isNumeric === true) {
@@ -679,49 +735,67 @@ const getGeneralCount = function (data, isNumeric) {
         values = Object.values(evidenceAttributeList);
 
         evidenceAttributeList = {};
-
-        //Export the labels and their values:
-        if (isNumeric === false) {
-            evidenceAttributeList['labels'] = labels;
-            evidenceAttributeList['values'] = values;
-        } else {
-            evidenceAttributeList['values'] = labels;
-        }
+        classes = [];
+        eachClass = {
+            name: null,
+            values: null,
+        };
 
         //Export the statistics by class 'yes' or 'no':
         if (isNumeric === false) {
+            //Get the 'All' first:
+            evidenceAttributeList['labels'] = labels;
+            eachClass.name = 'All';
+            eachClass.values = values;
+            classes.push(eachClass);
+            tempEvidenceAttributeList = {};
+
+            //Get for each class:
             classifierOutcomeList.forEach((aClass) => {
+                eachClass = {};
                 //isNumeric to use in the next line is always FALSE:
-                evidenceAttributeList[aClass] = gatherDataForEvidence(Data, aKey, false, false);
+                tempEvidenceAttributeList[aClass] = gatherDataForEvidence(Data, aKey, false, false);
                 valuesByClass[aClass] = [];
-                (Object.keys(evidenceAttributeList[aClass])).forEach((aKey) => {
-                    valuesByClass[aClass].push(evidenceAttributeList[aClass][aKey][aClass]);
+                (Object.keys(tempEvidenceAttributeList[aClass])).forEach((aKey) => {
+                    valuesByClass[aClass].push(tempEvidenceAttributeList[aClass][aKey][aClass]);
                 });
                 valuesByClass[aClass].pop();
-                evidenceAttributeList[aClass] = valuesByClass[aClass];
+                eachClass['name'] = aClass;
+                eachClass['values'] = valuesByClass[aClass];
+                classes.push(eachClass);
             });
         } else {
+            //Get the 'All' first:
             rawList = [];
-            Data.forEach((eachDict)=>{
+            Data.forEach((eachDict) => {
                 rawList.push(eachDict[aKey]);
             });
-            evidenceAttributeList['values'] = rawList;
+            eachClass['name'] = 'All';
+            eachClass['values'] = rawList;
+            classes.push(eachClass);
+
+            //Get for each class:
             valuesByClass = {};
             classifierOutcomeList.forEach((aClass) => {
                 valuesByClass[aClass] = [];
             });
-           // console.log("RawList is " + JSON.stringify(rawList));
-            for (n=0; n < rawList.length; n++){
-                classifierOutcomeList.forEach((aClass)=>{
-                    if(classes[n] === aClass){
+            // console.log("RawList is " + JSON.stringify(rawList));
+            for (n = 0; n < rawList.length; n++) {
+                classifierOutcomeList.forEach((aClass) => {
+                    if (rawClassList[n] === aClass) {
                         valuesByClass[aClass].push(rawList[n]);
                     };
                 });
             };
             classifierOutcomeList.forEach((aClass) => {
-                evidenceAttributeList[aClass] = valuesByClass[aClass];
+                eachClass = {};
+                eachClass['name'] = aClass;
+                eachClass['values'] = valuesByClass[aClass];
+                classes.push(eachClass);
             });
         }
+
+        evidenceAttributeList['classes'] = classes;
 
         //Export the table for showing next to be chart:
         evidenceAttributeList['table'] = toArray_twoDim(gatherDataForEvidence(Data, aKey, isNumeric, false));
@@ -1119,14 +1193,14 @@ const exportProbability = function (Data, TestSet, laplace) {
         //console.log('theHighestProbability = ' + theHighestProbability);
 
         //Calc the error rate:
-        if(originalClass === null || originalClass.trim() === ""){
+        if (originalClass === null || originalClass.trim() === "") {
             error = 0;
         } else {
-            if (originalClass !== theHighestProbability_class){
+            if (originalClass !== theHighestProbability_class) {
                 error = theHighestProbability;
                 console.log("error = " + error);
             } else {
-                error = 1-theHighestProbability;
+                error = 1 - theHighestProbability;
                 console.log("1 - error = " + error);
             }
         };
