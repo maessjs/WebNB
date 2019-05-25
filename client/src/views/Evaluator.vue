@@ -112,7 +112,7 @@
 
         if (this.checkFields()) {
           console.log('this.requestData:', JSON.stringify(this.requestData, null, 2))
-          axios.post('http://localhost:3000/api/test-cv?testdata=' + JSON.stringify(this.requestData))
+          axios.post('http://localhost:3000/api/evaluate?testdata=' + JSON.stringify(this.requestData))
             .then(res => {
               console.log('res:', JSON.stringify(res, null, 2))
               this.resultClass = 'Yes (this classification is hardcoded/fake - however there was an response from the server, please check browser console)   requested was the following: POST ' + 'http://localhost:3000/api/test-cv?testdata=' + JSON.stringify(this.requestData)

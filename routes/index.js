@@ -143,16 +143,17 @@ router.get('/api/fetch-attributes-specs', function (req, res, next) {
     let nonNummericData = getNumeric.getNonNumericAttributes(csvBody);
 
     let toFetch = [];
-    toFetch =  toFetch.concat(exportAttributeSpecs(nummericData, true));
+    toFetch = toFetch.concat(exportAttributeSpecs(nummericData, true));
     toFetch.pop(); //<-- remove the last 
-    toFetch =  toFetch.concat(exportAttributeSpecs(nonNummericData, false));
+    toFetch = toFetch.concat(exportAttributeSpecs(nonNummericData, false));
+    toFetch.pop(); //<-- remove the last 
 
     //Order as the order of original training dataset:
     let toReturn = [];
     let orderedKeyList = (Object.keys(csvBody[0]));
     orderedKeyList.forEach((key) => {
-        toFetch.forEach((eachDict)=>{
-            if(eachDict['name']===key){
+        toFetch.forEach((eachDict) => {
+            if (eachDict['name'] === key) {
                 toReturn.push(eachDict);
             }
         });
@@ -312,9 +313,11 @@ router.post('/api/test-up', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
 
     let file = req.files;
+    let hasOriginalClass;
     console.log('fileName = ' + file);
 
     let form = new formidable.IncomingForm();
+    let promise;
 
     form.encoding = "utf-8";
     form.parse(req);
@@ -337,6 +340,8 @@ router.post('/api/test-up', function (req, res, next) {
                     classifiedSet = [];
                     confusionMatrix = buildConfusionMatrix(csvBody);
                     testSet = JSON.parse(JSON.stringify(jsonObj));
+
+                    hasOriginalClass = hasOriginalClassBefore(testSet, exportClass(csvBody));
 
                     classifiedSet = classify(csvBody, testSet, laplace);
                     classifiedSet_plusOriginalClass = appendOriginalClass(classifiedSet, testSet);
@@ -378,7 +383,13 @@ router.post('/api/test-up', function (req, res, next) {
                     generalStatus.tested = true;
                     generalStatus.testingMode = 3;
                     generalStatus.testingDataFileName = file.name;
-                    generalStatus.hasOriginalClass = hasOriginalClassBefore(testSet, exportClass(csvBody));
+
+                    if (testSet[0][exportClass(csvBody)] === null || testSet[0][exportClass(csvBody)].trim() === "") {
+                        hasOriginalClass = false;
+                    } else {
+                        hasOriginalClass = true;
+                    }
+                    generalStatus.hasOriginalClass = hasOriginalClass;
 
                     if (RESULT_TO_ARRAY === true) {
                         toReturn.first_15rows_results = toArray_oneDim(classifiedSet_plusOriginalClass.slice(0, 15)); //<-- Getting 15 rows to return to the front-end:
@@ -393,6 +404,7 @@ router.post('/api/test-up', function (req, res, next) {
                         toReturn.confusion_matrix = confusionMatrix;
                     }
                     toReturn.status = generalStatus;
+                    console.log('toReturn.status =' + JSON.stringify(generalStatus));
 
                     res.status(202).end(JSON.stringify(toReturn));
                 })
@@ -400,8 +412,36 @@ router.post('/api/test-up', function (req, res, next) {
                     console.log("api/test-up OK");
                 }
                 );
-        }, 50);
+        }, 500);
     });
+});
+
+//RETURN THE CLASSIFIED SET WITH UPLOADED TEST SET:
+router.post('/api/evaluate', function (req, res, next) {
+    console.log("/api/evaluate is working.");
+    res.setHeader('Content-Type', 'application/json');
+
+    let testdata = req.query.testdata;
+
+    probabilityList = [];
+    classifiedSet = [];
+    confusionMatrix = buildConfusionMatrix(csvBody);
+    testdata = JSON.parse((testdata));
+    testdata.push("");
+
+    testSet = [{}];
+    let n =0;
+    (Object.keys(csvBody[0])).forEach((aKey)=>{
+        testSet[0][aKey] = null;
+        testSet[0][aKey] = testdata[n];
+        n++;
+    });
+
+    classifiedSet = classify(csvBody, testSet, laplace);
+    let toReturn = classifiedSet[0][exportClass(csvBody)];
+    console.log(classifiedSet);
+
+    res.status(202).end((toReturn));
 });
 
 //DOWNLOAD THE CLASSIFIED SET:
@@ -631,7 +671,7 @@ const exportAttributeSpecs = function (Data, isNumeric) {
         });
         if (isNumeric === true) {
             eachSpec['numerical'] = true;
-            if (checkTypeInArray(floatList)==='float'){
+            if (checkTypeInArray(floatList) === 'float') {
                 eachSpec['float'] = true;
             } else {
                 eachSpec['float'] = false;
@@ -647,13 +687,13 @@ const exportAttributeSpecs = function (Data, isNumeric) {
     return toReturn;
 }
 
-const checkTypeInArray = function(typeList){
+const checkTypeInArray = function (typeList) {
     checkType = '';
-    typeList.forEach((aType)=>{
-        if (aType === "string"){
+    typeList.forEach((aType) => {
+        if (aType === "string") {
             return 'string';
         } else {
-            if (aType === "integer"){
+            if (aType === "integer") {
                 checkType = 'integer';
             } else if (aType === "float") {
                 checkType = 'float';
@@ -664,26 +704,26 @@ const checkTypeInArray = function(typeList){
     return checkType;
 }
 
-const isFloatorInt = function(val){
+const isFloatorInt = function (val) {
     theNum = 0;
-    if(isNaN(val) === true){
+    if (isNaN(val) === true) {
         return "string"
     } else { //<-- if it IS A NUMBER:
         theNum = Number(val);
-        if (Number.isInteger(theNum) === true){
+        if (Number.isInteger(theNum) === true) {
             return "integer";
         } else {
-            if (isFloat(theNum) === true){
+            if (isFloat(theNum) === true) {
                 return "float";
             } else {
                 return 'unknown';
             }
         }
-        
+
     }
 }
 
-function isFloat(n){
+function isFloat(n) {
     return Number(n) === n && n % 1 !== 0;
 }
 
