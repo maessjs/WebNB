@@ -6,7 +6,8 @@
     "start": "node ./bin/www",
     "build": "npm install && npm run create_uploads_dir &&  npm run dirtyinstall --prefix ./client && npm run build --prefix ./client",
     "bfe": "npm run build --prefix ./client",
-    "create_uploads_dir": "mkdir uploads || true"
+    "create_uploads_dir": "mkdir uploads || true",
+    "heroku-postbuild": "npm install -g @vue/cli && npm install -g @vue/cli-service && npm install && npm run build"
   },
   "dependencies": {
     "body-parser": "^1.19.0",
@@ -32,5 +33,15 @@
     "progress": "^2.0.3",
     "pug": "2.0.0-beta11"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.6.0",
+    "@vue/cli-plugin-eslint": "^3.6.0",
+    "@vue/cli-plugin-pwa": "^3.6.0",
+    "@vue/cli-service": "^3.6.0",
+    "babel-eslint": "^10.0.1",
+    "css-loader": "^2.1.1",
+    "eslint": "^5.16.0",
+    "eslint-plugin-vue": "^5.0.0",
+    "vue-template-compiler": "^2.5.21"
+  }
 }
