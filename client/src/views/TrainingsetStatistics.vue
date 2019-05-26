@@ -55,7 +55,7 @@
     },
     methods: {
       getStatus() {
-        axios.get('http://localhost:3000/api/status')
+        axios.get('api/status')
           .then(res => {
             if (res.status == 200) this.status = res.data
             else console.log('Invalid status response')
@@ -63,7 +63,7 @@
           .catch(err => console.log(err))
       },
       fetchChartData() {
-        axios.get('http://localhost:3000/api/fetch-evidence-for-chart')
+        axios.get('api/fetch-evidence-for-chart')
           .then(res => {
             const statisticsData = {}
 

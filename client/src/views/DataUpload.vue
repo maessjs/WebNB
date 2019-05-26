@@ -53,7 +53,7 @@
     },
     methods: {
       getStatus() {
-        axios.get('http://localhost:3000/api/status')
+        axios.get('api/status')
           .then(res => {
             if (res.status == 200) this.status = res.data
             else console.log('Invalid status response')
@@ -72,7 +72,7 @@
         const fd = new FormData()
         fd.append('upload', this.selectedFile, this.selectedFile.name)
 
-        axios.post('http://localhost:3000/submit-form', fd)
+        axios.post('/submit-form', fd)
           .then(res => {
             if (res.status === 201) {
               this.success = true;
@@ -84,7 +84,7 @@
           .catch(err => console.log(err))
       },
       deleteData() {
-        axios.delete('http://localhost:3000/api/reset')
+        axios.delete('api/reset')
           .then(res => {
             if (res.status == 202) this.status = res.data
             else console.log('Invalid status response')

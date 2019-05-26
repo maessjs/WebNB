@@ -74,7 +74,7 @@
         </span>
         <!-- Prominent download button only for originally unclassified data -->
         <div v-else class="btn-wrapper" style="margin-top: 40px">
-          <a href="http://localhost:3000/api/download-classified">
+          <a href="api/download-classified"> <!-- TODO: does not work on dev server -->
             <button class="btn btn-download">Download classified data</button>
           </a>
         </div>
@@ -82,8 +82,8 @@
         <h3>Result dataset</h3>
         <TableR class="Table" :content="result.first_15rows_results" />
         <p>. . .</p>
-        <a href="http://localhost:3000/api/download-classified" class="download-link">Download the whole dataset (as
-          csv)</a>
+        <a href="api/download-classified" class="download-link">Download the whole dataset (as
+          csv)</a>  <!-- TODO: does not work on dev server -->
       </div>
     </div>
     <div v-else-if="status">
@@ -110,9 +110,9 @@
     data() {
       return {
         status: null,
-        url1part: 'http://localhost:3000/api/test-cv?k=',
+        url1part: '/api/test-cv?k=',
         kValue: 10,
-        url2: 'http://localhost:3000/api/test-up',
+        url2: '/api/test-up',
         selectedFile: null,
         result: null
       }
@@ -122,7 +122,7 @@
     },
     methods: {
       getStatus() {
-        axios.get('http://localhost:3000/api/status')
+        axios.get('api/status')
           .then(res => {
             if (res.status == 200) this.status = res.data
             else console.log('Invalid status response')

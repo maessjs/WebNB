@@ -66,7 +66,7 @@
     },
     methods: {
       getStatus() {
-        axios.get('http://localhost:3000/api/status')
+        axios.get('api/status')
           .then(res => {
             if (res.status == 200) this.status = res.data
             else console.log('Invalid status response')
@@ -74,7 +74,7 @@
           .catch(err => console.log(err))
       },
       getPossibleAttributes() {
-        axios.get('http://localhost:3000/api/fetch-attributes-specs')
+        axios.get('api/fetch-attributes-specs')
           .then(res => {
             if (res.status == 200) this.attributes = res.data
           })
@@ -110,10 +110,10 @@
 
         if (this.checkFields()) {
           console.log('this.requestData:', JSON.stringify(this.requestData, null, 2))
-          axios.post('http://localhost:3000/api/evaluate?testdata=' + JSON.stringify(this.requestData))
+          axios.post('api/evaluate?testdata=' + JSON.stringify(this.requestData))
             .then(res => {
               if (res.status === 202) this.resultClass = res.data
-              else this.errorMessage = 'There war an error. Please try again.'
+              else this.errorMessage = 'There was an error. Please try again.'
             })
             .catch(err => console.log('err:', err))
         } else {
