@@ -2,7 +2,7 @@
   <div class="container">
     <h1>Testing Page</h1>
     <div v-if="status && status.trainingDataUploaded">
-      <p style="margin-top: -20px;">({{ status.trainingDataFilename }})</p>
+      <p style="margin-top: -20px;">(Model based on {{ status.trainingDataFilename }})</p>
       <!-- Run tests -->
       <div class="request-block">
         <!-- Whole dataset -->

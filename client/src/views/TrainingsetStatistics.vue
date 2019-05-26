@@ -80,7 +80,6 @@
                   datasets: []
                 }
                 res.data[key].classes.forEach((c, index) => {
-                  console.log('c:', JSON.stringify(c, null, 2))
                   statisticsData[key].chartdata.datasets.push({
                     label: this.nameToLabel(c.name),
                     backgroundColor: this.colors[index],
@@ -97,7 +96,6 @@
                   datasets: []
                 }
                 res.data[key].classes.forEach((c, index) => {
-                  console.log('c:', JSON.stringify(c, null, 2))
                   statisticsData[key].chartdata.datasets.push({
                     label: this.nameToLabel(c.name),
                     backgroundColor: this.colors[index],

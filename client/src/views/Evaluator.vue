@@ -2,7 +2,7 @@
   <div class="container">
     <h1>Evaluator</h1>
     <div v-if="status && status.trainingDataUploaded && attributes">
-      <p style="margin-top: -20px;">({{ status.trainingDataFilename }})</p>
+      <p style="margin-top: -20px;">(Model based on {{ status.trainingDataFilename }})</p>
       <br>
       <p>Enter data that you want to classify</p>
       <form class="pure-form pure-form-aligned" @submit.prevent>
@@ -23,7 +23,7 @@
           </span>
 
           <div class="pure-controls button-wrapper">
-            <p v-if="errorMessage" class="error"> {{ errorMessage }} </p>
+            <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
             <button @click="classify" type="submit" class="pure-button pure-button-primary button">Submit</button>
           </div>
         </fieldset>
@@ -92,14 +92,12 @@
             (!attribute.float && this.requestData[index] % 1 !== 0)
               valid = false
             else
-              valid = valid
-
+              valid // do nothing
           else if // case: categorical - must be part of options
           (!attribute.numerical &&
-            (typeof this.requestData[index] === 'string' || this.requestData[index] instanceof String) &&
-            attribute.options.includes(this.requestData[index]))
-            valid = valid
-
+          (typeof this.requestData[index] === 'string' || this.requestData[index] instanceof String) &&
+          attribute.options.includes(this.requestData[index]))
+            valid // do nothing
           else
             valid = false
         });
@@ -114,8 +112,8 @@
           console.log('this.requestData:', JSON.stringify(this.requestData, null, 2))
           axios.post('http://localhost:3000/api/evaluate?testdata=' + JSON.stringify(this.requestData))
             .then(res => {
-              console.log('res:', JSON.stringify(res, null, 2))
-              this.resultClass = 'Yes (this classification is hardcoded/fake - however there was an response from the server, please check browser console)   requested was the following: POST ' + 'http://localhost:3000/api/test-cv?testdata=' + JSON.stringify(this.requestData)
+              if (res.status === 202) this.resultClass = res.data
+              else this.errorMessage = 'There war an error. Please try again.'
             })
             .catch(err => console.log('err:', err))
         } else {
