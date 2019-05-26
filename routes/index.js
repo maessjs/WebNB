@@ -210,6 +210,9 @@ router.post('/api/test-cv', function (req, res, next) {
             res.end(JSON.stringify(['Number k must be greater than 1, please recheck.']));
             return;
         }
+        if (k > csvBody.length){
+            k = csvBody.length;
+        }
     }
 
     //DOING THE K-FOLD-VALIDATION HERE:
