@@ -59,11 +59,19 @@
       <div v-if="result">
         <!-- Statistics tables only for testing/validation -->
         <span v-if="status.hasOriginalClass">
-          <div class="box">
-            <h3>Confusion Matrix</h3>
+          <h3>Confusion Matrix</h3>
+          <!-- if confusion matrix has only two classes: display table and chart -->
+          <div v-if="!result.confusion_matrix[0][3]" class="grid-container">
+            <div class="grid-item">
+              <Table class="Table" :content="result.confusion_matrix" />
+            </div>
+            <ConfusionDoughnutChart class="grid-item" :confusion_matrix="result.confusion_matrix" />
+          </div>
+          <!-- if confusion matrix has three or more classes: only display table -->
+          <div v-else>
             <Table class="Table" :content="result.confusion_matrix" />
           </div>
-          <div class="box">
+          <div>
             <h3>Correctness</h3>
             <Table class="Table" :content="result.correctness" />
           </div>
@@ -74,7 +82,8 @@
         </span>
         <!-- Prominent download button only for originally unclassified data -->
         <div v-else class="btn-wrapper" style="margin-top: 40px">
-          <a href="api/download-classified"> <!-- TODO: does not work on dev server -->
+          <a href="api/download-classified">
+            <!-- TODO: does not work on dev server -->
             <button class="btn btn-download">Download classified data</button>
           </a>
         </div>
@@ -83,7 +92,7 @@
         <TableR class="Table" :content="result.first_15rows_results" />
         <p>. . .</p>
         <a href="api/download-classified" class="download-link">Download the whole dataset (as
-          csv)</a>  <!-- TODO: does not work on dev server -->
+          csv)</a> <!-- TODO: does not work on dev server -->
       </div>
     </div>
     <div v-else-if="status">
@@ -98,14 +107,17 @@
 
 <script>
   import axios from 'axios'
+
   import Table from '../components/Table.vue'
   import TableR from '../components/Table--result.vue'
+  import ConfusionDoughnutChart from '../components/ConfusionDoughnutChart.vue'
 
   export default {
     name: 'Testing',
     components: {
       Table,
-      TableR
+      TableR,
+      ConfusionDoughnutChart
     },
     data() {
       return {
@@ -115,6 +127,22 @@
         url2: '/api/test-up',
         selectedFile: null,
         result: null
+      }
+    },
+    computed: {
+      contingency_chartdata: function () {
+        return {
+          datasets: [{
+            data: [343, 4, 20, 30],
+            backgroundColor: ['#233142', '#4f9da6', '#facf5a', '#ff5959']
+          }],
+          labels: [
+            'TP',
+            'TN',
+            'FP',
+            'FN'
+          ]
+        };
       }
     },
     created() {
@@ -170,10 +198,17 @@
     margin: auto;
   }
 
-  .box {
-    display: inline-block;
-    width: 295px;
-    margin: auto;
+  .grid-container {
+    max-width: 500px;
+    margin: -30px auto 0 auto;
+    display: grid;
+    grid-template-columns: 40% 60%;
+  }
+
+  .grid-item {
+    grid-area: span 1 / span 1;
+    padding: 30px;
+    align-self: center;
   }
 
   .request-block {
