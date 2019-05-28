@@ -199,7 +199,7 @@ router.post('/api/test-cv', function (req, res, next) {
     /*VALIDTION OF K:
     - k must be >= 1
     - k can be only integer
-    - k cannot be greaer than the length of uploade test set
+    - k cannot be greater than the length of uploade test set
     */
     if (isNaN(k)) {
         res.end(JSON.stringify(['Your k is not a valid number, please recheck.']));
@@ -317,12 +317,9 @@ router.post('/api/test-cv', function (req, res, next) {
 router.post('/api/test-up', function (req, res, next) {
     console.log("/api/test-up is working.");
     res.setHeader('Content-Type', 'application/json');
-
-    let file = req.files;
     let hasOriginalClass;
 
     let form = new formidable.IncomingForm();
-    let promise;
 
     form.encoding = "utf-8";
     form.parse(req);
