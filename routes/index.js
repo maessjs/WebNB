@@ -1,6 +1,8 @@
 var ProgressBar = require('progress');
 var bar;
 
+let discrete = require('../algorithms/discretisation.js');
+
 const converter = require('json-2-csv');
 var statistics = require('../algorithms/statistics.js');
 var getNumeric = require('../algorithms/get_only_numeric_cols.js');
@@ -72,7 +74,7 @@ router.delete('/api/reset', function (req, res, next) {
 });
 
 //WHEN USER CLICKS ON DOWNLOAD SAMPLE DATASET:
-router.get('/api/download', function (req, res, next) {
+router.get('/api/download-sample', function (req, res, next) {
     let fileNameToDownLoad = req.query.fileName;
     let file = './downloads/' + fileNameToDownLoad;
     res.download(file);
@@ -188,6 +190,13 @@ router.get('/api/train', function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     let k = req.query.k;
     res.end(JSON.stringify(exportBestModelTrainingSet(csvBody, k, laplace)));
+});
+
+//GET:
+router.get('/api/example-discretelist', function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    let key = req.query.key;
+    res.end(JSON.stringify(discrete.exportDiscretisedList(6, csvBody, key)));
 });
 
 //RETURN THE CLASSIFIED SET WITH K-FOLD VALIDATION
@@ -759,18 +768,6 @@ const deleteUploaded = function () {
 //------------------------------------------------------------------------------------------------
 
 //The grande collection of naive bayes functions:
-const getKappa = function (confusionMatrix) {
-    let accurrateClassified = 0;
-
-    let TP, TN, FP, FN;
-    let classes = [];
-
-    (Object.keys(confusionMatrix)).forEach((eachKey) => {
-        accurrateClassified += confusionMatrix[eachKey][eachKey];
-        TP;
-    });
-};
-
 const getGeneralCount = function (data, isNumeric) {
 
     var evidenceList = {};
@@ -778,7 +775,10 @@ const getGeneralCount = function (data, isNumeric) {
     var Data = JSON.parse(JSON.stringify(data));
     var keysOfData = Object.keys(Data[0]);
 
-    var evidenceAttributeList = {};
+    let numBin = 6;
+    let discretisedSet = discrete.discretise(numBin,Data);
+
+    let evidenceAttributeList = {};
     var anEvidenceAttribute = "";
     var value;
 
@@ -789,6 +789,9 @@ const getGeneralCount = function (data, isNumeric) {
     let values = [];
     let rawClassList = [];
     let classes = [];
+    let histogram = {};
+    let finalHistogram  = {};
+    let discretelist = [];
     let eachClass = {};
     let tempEvidenceAttributeList = {};
 
@@ -823,6 +826,11 @@ const getGeneralCount = function (data, isNumeric) {
 
         evidenceAttributeList = {};
         classes = [];
+        histogram = {};
+        finalHistogram = {
+            labels: [],
+            values: [],
+        }
         eachClass = {
             name: null,
             values: null,
@@ -851,7 +859,7 @@ const getGeneralCount = function (data, isNumeric) {
                 eachClass['values'] = valuesByClass[aClass];
                 classes.push(eachClass);
             });
-        } else {
+        } else { //<- The attribue IS NUMERIC:
             //Get the 'All' first:
             rawList = [];
             Data.forEach((eachDict) => {
@@ -879,10 +887,41 @@ const getGeneralCount = function (data, isNumeric) {
                 eachClass['values'] = valuesByClass[aClass];
                 classes.push(eachClass);
             });
+            //Construct the histogram:
+            discretelist = discrete.exportDiscretisedList(numBin,Data,aKey);
+            discretisedSet.forEach((eachDict)=>{
+                histogram[eachDict[aKey]] =0;
+            });
+            discretisedSet.forEach((eachDict)=>{
+                histogram[eachDict[aKey]] += 1;
+            });
+            discretelist.forEach((aLabel)=>{
+                finalHistogram.labels.push(aLabel);
+            });
+            //finalHistogram.labels.sort();
+            finalHistogram.labels.forEach((aLabel)=>{
+                finalHistogram.values.push(histogram[aLabel]);
+            });
+
+            for(var i =0; i <finalHistogram.values.length;i++ ){
+                //console.log("This is checking for null ");
+                if (finalHistogram.values[i] == null){
+                    //console.log("Hey this is null here.");
+                    finalHistogram.values[i] = 0;
+                }
+            }
+            /* finalHistogram.values.forEach((each)=>{
+                console.log("This is checking for null ");
+                if (each == null){
+                    console.log("Hey this is null here.");
+                    each = 0;
+                }
+            }); */
+            evidenceAttributeList['histogram'] = finalHistogram;
         }
 
         evidenceAttributeList['classes'] = classes;
-
+        
         //Export the table for showing next to be chart:
         evidenceAttributeList['table'] = toArray_twoDim(gatherDataForEvidence(Data, aKey, isNumeric, false));
 
@@ -893,13 +932,13 @@ const getGeneralCount = function (data, isNumeric) {
 };
 
 const exportClass = function (Data) {
-    var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
+    let finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
     return finalColName;
 };
 
 const exportClassifierOutcomeList = function (Data) {
-    var finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
-    var classifierOutcomeList = [];
+    let finalColName = Object.keys(Data[0])[Object.keys(Data[0]).length - 1];
+    let classifierOutcomeList = [];
     Data.forEach((element) => {
         classifierOutcome = element[finalColName];
         classifierOutcomeList.push(classifierOutcome);
@@ -908,12 +947,12 @@ const exportClassifierOutcomeList = function (Data) {
 };
 
 const gatherDataForEvidence = function (data, key, isNumeric, laplace) {
-    var Data = JSON.parse(JSON.stringify(data));
-    var evidenceList = {};
-    var evidenceAttributeList = {};
-    var anEvidenceAttribute = "";
+    let Data = JSON.parse(JSON.stringify(data));
+    let evidenceList = {};
+    let evidenceAttributeList = {};
+    let anEvidenceAttribute = "";
     let aKey = key;
-    var value;
+    let value;
     let count = {};
 
     let classCol = exportClass(Data);
@@ -921,24 +960,32 @@ const gatherDataForEvidence = function (data, key, isNumeric, laplace) {
     classifierOutcomeList = [...new Set(classifierOutcomeList)];
 
     evidenceAttributeList = {};
-    Data.forEach((element) => {
-        anEvidenceAttribute = (element[aKey]);
-        evidenceAttributeList[anEvidenceAttribute] = "";
+    if (isNumeric === false) {
+        Data.forEach((element) => {
+            anEvidenceAttribute = (element[aKey]);
+            evidenceAttributeList[anEvidenceAttribute] = "";
 
-        value = {};
-        classifierOutcomeList.forEach((aClass) => {
-            value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace));
+            value = {};
+            classifierOutcomeList.forEach((aClass) => {
+                value[aClass] = (InstanceofFrequency(Data, aKey, anEvidenceAttribute, classCol, aClass, laplace));
+            });
+            value['All'] = 0;
+            classifierOutcomeList.forEach((aClass) => {
+                value['All'] += value[aClass];
+            });
+            evidenceAttributeList[anEvidenceAttribute] = value;
         });
-        evidenceAttributeList[anEvidenceAttribute] = value;
-    });
-    classifierOutcomeList.forEach((aClass) => {
-        count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
-    });
-    evidenceAttributeList['count'] = count;
-    evidenceList = evidenceAttributeList;
+        classifierOutcomeList.forEach((aClass) => {
+            count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
+        });
+        count['All'] = 0;
+        classifierOutcomeList.forEach((aClass) => {
+            count['All'] += count[aClass];
+        });
+        evidenceAttributeList['count'] = count;
+        evidenceList = evidenceAttributeList;
 
-    //Handling if the return contains only numeric:
-    if (isNumeric === true) {
+    } else { //<-- Handling if the return contains only numeric:
         let min, max, mean, stddev;
 
         evidenceList = {};
@@ -962,7 +1009,16 @@ const gatherDataForEvidence = function (data, key, isNumeric, laplace) {
 
             count[aClass] = ProbalityDenominator(Data, aKey, classCol, aClass, laplace);
             evidenceList['count'][aClass] = count[aClass];
-        })
+        });
+
+        evidenceList.min['All'] = parseFloat(getMinMax('min',Data,key).toFixed(2));
+        evidenceList.max['All'] = parseFloat(getMinMax('max',Data,key).toFixed(2));
+        evidenceList.mean['All'] = parseFloat(getMean(Data,key).toFixed(2));
+        evidenceList.stddev['All'] = parseFloat(getStdDeviation(Data, key).toFixed(2));
+        evidenceList['count']['All'] =0;
+        classifierOutcomeList.forEach((aClass) => {
+            evidenceList['count']['All'] += count[aClass];
+        });
     }
 
     return evidenceList;
@@ -1005,6 +1061,23 @@ var ProbalityDenominator = function (Data, Evidence, Class, ClassifierOutcome, l
 };
 
 //Get mean and standard deviation:
+let getMinMax = function (MinOrMax, Data, Attribute_Need_To_findMean) {
+    var data = JSON.parse(JSON.stringify(Data));
+    var sumAll = [];
+    var n = 0;
+    data.forEach((aDict) => {
+            sumAll.push(parseFloat(aDict[Attribute_Need_To_findMean]));
+            n++;
+    });
+    let toReturn;
+    if (MinOrMax === "min") {
+        toReturn = Math.min.apply(null, sumAll);
+    } else {
+        toReturn = Math.max.apply(null, sumAll);
+    }
+    return toReturn;
+};
+
 var getMean = function (Data, Attribute_Need_To_findMean) {
     var data = JSON.parse(JSON.stringify(Data));
     var sumAll = 0;
@@ -1017,18 +1090,18 @@ var getMean = function (Data, Attribute_Need_To_findMean) {
 };
 
 var getStdDeviation = function (Data, Attribute_Need_To_findStdDev) {
-    var numeratorOfStdDev = 0;
-    var mean = getMean(Data, Attribute_Need_To_findStdDev);
-    var x;
-    var data = JSON.parse(JSON.stringify(Data));
-    var n = 0;
+    let numeratorOfStdDev = 0;
+    let mean = getMean(Data, Attribute_Need_To_findStdDev);
+    let x;
+    let data = JSON.parse(JSON.stringify(Data));
+    let n = 0;
 
     data.forEach((aDict) => {
         x = aDict[Attribute_Need_To_findStdDev];
-        numeratorOfStdDev += Math.abs(Math.pow((x - mean), 2));
+        numeratorOfStdDev += (Math.pow(Math.abs(x - mean), 2));
         n++;
     });
-    return (numeratorOfStdDev / (n - 1));
+    return (Math.sqrt(numeratorOfStdDev / (n - 1)));
 };
 
 //Get mean and standard deviation WITH CONDITION:
@@ -1065,20 +1138,19 @@ var getMinMaxIf = function (MinOrMax, Data, Attribute_Need_To_findMean, classCol
 };
 
 var getStdDeviationIf = function (Data, Attribute_Need_To_findStdDev, classCol, class_to_findStdDev) {
-    var numeratorOfStdDev = 0;
-    var mean = getMeanIf(Data, Attribute_Need_To_findStdDev, classCol, class_to_findStdDev);
-    var x;
-    var data = JSON.parse(JSON.stringify(Data));
-    var n = 0;
-
+    let numeratorOfStdDev = 0;
+    let mean = getMeanIf(Data, Attribute_Need_To_findStdDev, classCol, class_to_findStdDev);
+    let x;
+    let data = JSON.parse(JSON.stringify(Data));
+    let n = 0;
     data.forEach((aDict) => {
         if (aDict[classCol] === class_to_findStdDev) {
             x = aDict[Attribute_Need_To_findStdDev];
-            numeratorOfStdDev += Math.abs(Math.pow((x - mean), 2));
+            numeratorOfStdDev += Math.pow(   Math.abs(x - mean)    , 2);
             n++;
         }
     });
-    return (numeratorOfStdDev / (n - 1));
+    return (Math.sqrt(numeratorOfStdDev / (n - 1)));
 };
 
 //THE LAPLACE will applied in this function:

@@ -1,13 +1,76 @@
 
 module.exports = {
 
+    exportDiscretisedList: function (NumBin, Data, attributeName) {
+        let data = JSON.parse(JSON.stringify(Data));
+        let numBin = NumBin;
+        let key = attributeName;
+        let toReturn = [];
+
+        //Start discretisation:
+        let numList = [];
+        let numListMax = 0;
+        let numListMin = 0;
+        let numListRange = 0;
+        let binSize = 0;
+        let i;
+        let n;
+
+        numList = [];
+        //for example: key is now age:
+        data.forEach((object) => {
+            numList.push(parseFloat(object[key]));
+        });
+        //Example: numList = [0,1,2,2,4,4,4,4,5,6,6,6,7,8,];
+        numListMax = Math.max(...numList);
+        numListMin = Math.min(...numList);
+
+        numListRange = numListMax - numListMin;
+
+        binSize = numListRange / numBin;
+            n = 1;
+            for (i = numListMin; i < numListMax; i += binSize) {
+                if (n <= numBin){
+                    //console.log('Dans la range de [' + i  +" - " + (i+binSize)+ ']' );
+                    data.forEach((object) => {
+                        if (object[key] === numListMax) {
+                            toReturn.push(
+                                (Math.round((numListMax - binSize) * 100) / 100)
+                                + " - "
+                                + (Math.round(numListMax * 100) / 100));
+                        } else if (object[key] === numListMin) {
+                            toReturn.push(
+                                (Math.round(numListMin * 100) / 100)
+                                + " - "
+                                + (Math.round((numListMin + binSize) * 100) / 100));
+                        } else if (object[key] >= i && object[key] < (i + binSize)) {
+                            toReturn.push(
+                                (Math.round(i * 100) / 100)
+                                + " - "
+                                + (Math.round((i + binSize) * 100) / 100));
+                        } else {
+                            toReturn.push(
+                                (Math.round(i * 100) / 100)
+                                + " - "
+                                + (Math.round((i + binSize) * 100) / 100));
+                        };  
+                });  
+            }
+            n++;
+            toReturn = [...new Set(toReturn)];
+            //console.log(toReturn);
+        };
+        toReturn = [...new Set(toReturn)];
+        return toReturn;
+    },
+
     discretise: function (NumBin, Data) {
-        var data = JSON.parse(JSON.stringify(Data));
-        var numBin = NumBin;
+        let data = JSON.parse(JSON.stringify(Data));
+        let numBin = NumBin;
 
         //Get keys of the data:
-        var keyList = Object.keys(data[1]);
-        var keyListNumeric = [];
+        let keyList = Object.keys(data[0]);
+        let keyListNumeric = [];
 
         keyList.forEach((key) => {
             data.forEach((object => {
@@ -20,89 +83,59 @@ module.exports = {
         //This is for removing duplications:
         keyListNumeric = [...new Set(keyListNumeric)];
 
-        var bin = [];
-
         //Start discretisation:
-        var numList = [];
-        var numListMax = 0;
-        var numListMin = 0;
-        var numListRange = 0;
-        var binSize = 0;
-        var n = 0;
-        var i;
-        var oldValue = 0;
+        let numList = [];
+        let numListMax = 0;
+        let numListMin = 0;
+        let numListRange = 0;
+        let binSize = 0;
+        let n = 0;
+        let i;
 
         keyListNumeric.forEach((key) => {
-            console.log("\nCurrent key: " + key);
             numList = [];
             //for example: key is now age:
-            data.forEach((object => {
-                numList.push(parseInt(object[key]));
-            }));
-            console.log(numList);
+            data.forEach((object) => {
+                numList.push(parseFloat(object[key]));
+            });
             //Example: numList = [0,1,2,2,4,4,4,4,5,6,6,6,7,8,];
             numListMax = Math.max(...numList);
-            console.log("Max: " + numListMax);
-
             numListMin = Math.min(...numList);
-            console.log("Min: " + numListMin);
 
             numListRange = numListMax - numListMin;
-            if (numListMax < 0 && numListMin < 0) {
-                numListRange = Math.abs(numListMin) - Math.abs(numListMax);
-            }
-            if (numListMax > 0 && numListMin > 0) {
-                numListRange = numListMax - numListMin;
-            }
-            if (numListMax >= 0 && numListMin < 0) {
-                numListRange = numListMax + Math.abs(numListMin);
-            }
-
-            console.log("numListRange: " + numListMin);
 
             binSize = numListRange / numBin;
-            console.log("binSize: " + numListMin);
-
-            console.log("Prepare for for:");
-            for (i = numListMin; i <= numListMax; i += binSize) {
+            for (i = numListMin; i < numListMax; i += binSize) {
                 n = 0;
                 data.forEach((object => {
                     if (object[key] == numListMax) {
                         oldValue = object[key];
-                        data[n][key] = "From "
-                            + (Math.round((numListMax - binSize)*100)/100)
-                            + " to "
-                            + (Math.round(numListMax*100)/100);
-                        console.log(oldValue + " goes to " + object[key]);
+                        data[n][key] = (Math.round((numListMax - binSize) * 100) / 100)
+                            + " - "
+                            + (Math.round(numListMax * 100) / 100);
                     } else if (object[key] == numListMin) {
                         oldValue = object[key];
-                        data[n][key] = "From "
-                            + (Math.round(numListMin*100)/100)
-                            + " to "
-                            + (Math.round((numListMin + binSize)*100)/100);
-                        console.log(oldValue + " goes to " + object[key]);
+                        data[n][key] = (Math.round(numListMin * 100) / 100)
+                            + " - "
+                            + (Math.round((numListMin + binSize) * 100) / 100);
                     } else if (object[key] >= i && object[key] < (i + binSize)) {
                         oldValue = object[key];
                         //object[key] = "From " + i + " to " + (i+binSize);
-                        data[n][key] = "From "
-                            + (Math.round(i*100)/100)
-                            + " to "
-                            + (Math.round((i + binSize)*100)/100);
-                        console.log(oldValue + " goes to " + object[key]);
+                        data[n][key] = (Math.round(i * 100) / 100)
+                            + " - "
+                            + (Math.round((i + binSize) * 100) / 100);
                     }
                     n++;
                 }));
             }
         });
-
-        console.log("Transformed data: " + data);
         return data;
     },
 
     isThereNumericInside: function (data) {
-        var keyList = Object.keys(data[1]);
-        var keyListNumeric = [];
-        var toReturn = null;
+        let keyList = Object.keys(data[1]);
+        let keyListNumeric = [];
+        let toReturn = null;
 
         keyList.forEach((key) => {
             data.forEach((object => {
