@@ -7,10 +7,16 @@
         <div v-for="(attribute, index) in statisticsData" :key="'attribute' + index" :index="index">
           <h3>{{ attribute.name }}</h3>
           <p class="typeinfo">{{ attribute.isNumerical ? '(numerical)' : '(categorical)' }}</p>
-          <div class="grid-container">
-            <BarChart v-if="!attribute.isNumerical" class="grid-item" :datacollection="attribute.chartdata" />
-            <BoxPlotChart v-else class="grid-item" :chart-data="attribute.chartdata" />
+          <!-- categorical -> histogram + table -->
+          <div v-if="!attribute.isNumerical" class="grid-container">
+            <BarChart class="grid-item" :datacollection="attribute.chartdata" />
             <Table :content="attribute.table" class="grid-item" style="tr:last-child { font-weight: bold; }" />
+          </div>
+          <!-- numerical -> boxplot + table + histogram -->
+          <div v-else class="grid-container grid-container--big">
+            <BoxPlotChart class="grid-item" :chart-data="attribute.boxplotdata" />
+            <Table :content="attribute.table" class="grid-item" style="tr:last-child { font-weight: bold; }" />
+            <BarChart class="grid-item" :datacollection="attribute.histogramdata" />
           </div>
         </div>
       </div>
@@ -74,6 +80,7 @@
               }
 
               if (res.data[key].labels) {
+                // categorical --> histogram + table
                 statisticsData[key].isNumerical = false
                 statisticsData[key].chartdata = {
                   labels: res.data[key].labels,
@@ -90,21 +97,35 @@
                   })
                 });
               } else {
+                // numerical --> boxplot + table
                 statisticsData[key].isNumerical = true
-                statisticsData[key].chartdata = {
+                statisticsData[key].boxplotdata = {
                   labels: ['#'],
                   datasets: []
                 }
                 res.data[key].classes.forEach((c, index) => {
-                  statisticsData[key].chartdata.datasets.push({
+                  statisticsData[key].boxplotdata.datasets.push({
                     label: this.nameToLabel(c.name),
                     backgroundColor: this.colors[index],
+                    borderColor: 'black',
                     pointBackgroundColor: 'white',
                     borderWidth: 1,
                     pointBorderColor: '#249EBF',
                     data: [c.values.map(Number)]
                   })
                 });
+
+                statisticsData[key].histogramdata = {
+                  labels: res.data[key].histogram.labels,
+                  datasets: [{
+                    label: 'All instances',
+                    backgroundColor: this.colors[0],
+                    pointBackgroundColor: 'white',
+                    borderWidth: 1,
+                    pointBorderColor: '#249EBF',
+                    data: res.data[key].histogram.values
+                  }]
+                }
               }
             }
             this.statisticsData = statisticsData
@@ -120,14 +141,21 @@
 </script>
 
 <style scoped>
-  .container {
+  /* .container {
     margin: 0 auto;
     max-width: 800px;
-  }
+  } */
 
   .grid-container {
     display: grid;
     grid-template-columns: 50% 50%;
+    margin: 0 auto;
+    max-width: 800px;
+  }
+
+  .grid-container--big {
+    grid-template-columns: 33% 33% 33%;
+    max-width: 1200px;
   }
 
   .grid-item {

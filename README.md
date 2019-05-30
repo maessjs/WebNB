@@ -7,8 +7,8 @@ Easily run Naive Bayes classifiers and analyse your data!
 ## Getting started
 
 1. Install
-* To run WebNB locally, it is required to have Node.js and npm (Node Packet Manager) installed on your PC.
-* You can download and install them from nodejs.org.
+* To run WebNB locally, it is required to have Node.js and the bundled npm (Node Packet Manager) installed on your PC.
+* An download and and instructions on how to install them on nodejs.org.
 * Check your installation by entering *node -v* and *npm -v* into the command line.
 
 2. Build
@@ -16,6 +16,7 @@ Easily run Naive Bayes classifiers and analyse your data!
 * Run *npm run build* (this will load all necessary dependencies and build the application.
 
 3. Run
+* Enter *npm start* into the command line, while being in the **/WebNB** directory.
 * Access the application by entering *localhost:3000* in your web browser.
 * Instructions on how to use the website can be found on the landing page.
 

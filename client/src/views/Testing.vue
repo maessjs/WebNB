@@ -62,7 +62,7 @@
           <h3>Confusion Matrix</h3>
           <!-- if confusion matrix has only two classes: display table and chart -->
           <div v-if="!result.confusion_matrix[0][3]" class="grid-container">
-            <div class="grid-item">
+            <div class="grid-item grid-item--table">
               <Table class="Table" :content="result.confusion_matrix" />
             </div>
             <ConfusionDoughnutChart class="grid-item" :confusion_matrix="result.confusion_matrix" />
@@ -198,7 +198,7 @@
     margin: auto;
   }
 
-  .grid-container {
+  /* .grid-container {
     max-width: 500px;
     margin: -30px auto 0 auto;
     display: grid;
@@ -209,6 +209,15 @@
     grid-area: span 1 / span 1;
     padding: 30px;
     align-self: center;
+  }
+
+  .grid-item--table {
+    padding-right: 500px;
+  } */
+
+  .grid-item {
+    margin: auto;
+    width: 300px;
   }
 
   .request-block {
