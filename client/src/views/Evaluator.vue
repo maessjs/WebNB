@@ -138,7 +138,7 @@
 
   .grid-item {
     grid-area: span 1 / span 1;
-    padding: 15px;
+    padding: 10px;
   }
 
   .grid-item--label {

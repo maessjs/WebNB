@@ -48,7 +48,7 @@
       return {
         status: null,
         statisticsData: null,
-        colors: ['#233142', '#4f9da6', '#facf5a', '#ff5959', '#233142', '#4f9da6', '#facf5a', '#ff5959']
+        colors: ['#41678c', '#4f9da6', '#facf5a', '#ff5959', '#41678c', '#4f9da6', '#facf5a', '#ff5959']
       }
     },
     watch: {
