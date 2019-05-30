@@ -20,6 +20,12 @@ Easily run Naive Bayes classifiers and analyse your data!
 * Access the application by entering *localhost:3000* in your web browser.
 * Instructions on how to use the website can be found on the landing page.
 
+## Quick Run in Windows
+
+After having done the three steps above, in the future, you can run the project quickly in Windows just by executing the file ***run-project.bat*** in this project directory and no need to do any further steps. However, before using the *run-project.bat*, please make sure:
+* Having done the three steps above which are *Install*, *Build* and *Run*.
+* Having ***Node.js*** (with ***npm***) installed on your computer.
+
 
 ## Further information
 * The newest version of this software can be found on and loaded from **https://github.com/maessjs/WebNB**.
