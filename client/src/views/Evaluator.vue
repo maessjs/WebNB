@@ -29,6 +29,9 @@
         </fieldset>
       </form>
 
+      <!-- loader -->
+      <div v-if="response_pending" class="loader"></div>
+
       <!-- result -->
       <h2 v-if="resultClass">Result: {{ resultClass }}</h2>
 
@@ -39,9 +42,7 @@
     <div v-else-if="status">
       <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
     </div>
-    <div v-else>
-      <p>Loading ...</p>
-    </div>
+    <div v-else class="loader"></div>
   </div>
 </template>
 
@@ -57,6 +58,7 @@
         attributes: null,
         requestData: [],
         errorMessage: null,
+        response_pending: false,
         resultClass: null
       }
     },
@@ -107,12 +109,17 @@
       classify() {
         this.errorMessage = null
         this.resultClass = null
+        
+        this.response_pending = true
 
         if (this.checkFields()) {
           console.log('this.requestData:', JSON.stringify(this.requestData, null, 2))
           axios.post('api/evaluate?testdata=' + JSON.stringify(this.requestData))
             .then(res => {
-              if (res.status === 202) this.resultClass = res.data
+              if (res.status === 202) {
+                this.response_pending = false
+                this.resultClass = res.data
+              }
               else this.errorMessage = 'There was an error. Please try again.'
             })
             .catch(err => console.log('err:', err))

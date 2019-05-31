@@ -55,6 +55,9 @@
         </div>
       </div>
 
+      <!-- loader -->
+      <div v-if="response_pending" class="loader"></div>
+
       <!-- results -->
       <div v-if="result">
         <!-- Statistics tables only for testing/validation -->
@@ -98,9 +101,7 @@
     <div v-else-if="status">
       <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
     </div>
-    <div v-else>
-      <p>Loading ...</p>
-    </div>
+    <div v-else class="loader"></div>
   </div>
 
 </template>
@@ -126,6 +127,7 @@
         kValue: 10,
         url2: '/api/test-up',
         selectedFile: null,
+        response_pending: false,
         result: null
       }
     },
@@ -158,9 +160,14 @@
           .catch(err => console.log(err))
       },
       req_cv(k) {
+        this.result = null
+        this.response_pending = true
+
         axios.post(this.url1part + k)
           .then(res => {
             if (res.status === 200) {
+              this.response_pending = false
+
               this.result = res.data
               if (res.data.status) this.status = res.data.status
             }
@@ -174,9 +181,14 @@
         const fd = new FormData()
         fd.append('upload', this.selectedFile, this.selectedFile.name)
 
+        this.result = null
+        this.response_pending = true
+
         axios.post(this.url2, fd)
           .then(res => {
             if (res.status === 202) {
+              this.response_pending = false
+
               this.result = res.data
               if (res.data.status) this.status = res.data.status
             }

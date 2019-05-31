@@ -24,9 +24,7 @@
     <div v-else-if="status">
       <p><b>You need to <router-link to="/DataUpload">upload a file</router-link> with training data first.</b></p>
     </div>
-    <div v-else>
-      <p>Loading ...</p>
-    </div>
+    <div v-else class="loader"></div>
   </div>
 </template>
 
@@ -160,7 +158,7 @@
 
   .grid-item {
     grid-area: span 1 / span 1;
-    padding: 15px;
+    padding: 10px;
     place-self: center;
   }
 

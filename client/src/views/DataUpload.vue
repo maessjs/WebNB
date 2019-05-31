@@ -14,6 +14,10 @@
             <input type="file" name="training_data" @change="onFileSelected" />
           </div>
         </form>
+
+        <!-- loader -->
+        <div v-if="response_pending" class="loader"></div>
+
         <!-- delete form -->
         <form v-if="status.trainingDataUploaded" class="form" @submit.prevent>
           <div class="btn-wrapper">
@@ -24,9 +28,7 @@
         </form>
       </div>
     </div>
-    <div v-else>
-      <p>Loading ...</p>
-    </div>
+    <div v-else class="loader"></div>
   </div>
 </template>
 
@@ -38,7 +40,8 @@
     data() {
       return {
         status: null,
-        selectedFile: null
+        selectedFile: null,
+        response_pending: false
       }
     },
     computed: {
@@ -67,7 +70,7 @@
       upload() {
         if (!this.selectedFile) return
 
-        this.success = false
+        this.response_pending = true
 
         const fd = new FormData()
         fd.append('upload', this.selectedFile, this.selectedFile.name)
@@ -75,7 +78,7 @@
         axios.post('/submit-form', fd)
           .then(res => {
             if (res.status === 201) {
-              this.success = true;
+              this.response_pending = false
               this.$router.push({
                 path: 'TrainingsetStatistics'
               })
