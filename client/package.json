@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "chart.js": "^2.8.0",
+    "chart.js": "^2.9.4",
     "chartjs-chart-box-and-violin-plot": "^2.1.0",
     "core-js": "^2.6.5",
     "register-service-worker": "^1.6.2",
